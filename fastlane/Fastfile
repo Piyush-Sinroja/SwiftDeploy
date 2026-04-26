@@ -121,7 +121,7 @@ platform :ios do
   # Run: bundle exec fastlane certs_dev
   lane :certs_dev do
     api_key = asc_api_key
-    sync_code_signing(
+    match(
       type:             "development",
       app_identifier:   [ENV["APP_IDENTIFIER_DEV"]],
       api_key:          api_key,
@@ -134,7 +134,7 @@ platform :ios do
   # Run: bundle exec fastlane certs_qa
   lane :certs_qa do
     api_key = asc_api_key
-    sync_code_signing(
+    match(
       type:             "appstore",
       app_identifier:   [ENV["APP_IDENTIFIER_QA"]],
       api_key:          api_key,
@@ -147,7 +147,7 @@ platform :ios do
   # Run: bundle exec fastlane certs_prod
   lane :certs_prod do
     api_key = asc_api_key
-    sync_code_signing(
+    match(
       type:             "appstore",
       app_identifier:   [ENV["APP_IDENTIFIER_PROD"]],
       api_key:          api_key,
@@ -201,7 +201,7 @@ platform :ios do
     )
 
     # Refresh dev provisioning profile to include new device
-    sync_code_signing(
+    match(
       type:                  "development",
       app_identifier:        [ENV["APP_IDENTIFIER_DEV"]],
       api_key:               api_key,
@@ -219,7 +219,7 @@ platform :ios do
   # bundle exec fastlane sync_devices
   lane :sync_devices do
     api_key = asc_api_key
-    sync_code_signing(
+    match(
       type:                  "development",
       app_identifier:        [ENV["APP_IDENTIFIER_DEV"]],
       api_key:               api_key,
