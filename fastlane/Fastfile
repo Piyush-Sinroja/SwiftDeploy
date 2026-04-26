@@ -1,0 +1,113 @@
+default_platform(:ios)
+
+PROJECT = "SwiftDeploy.xcodeproj"
+
+platform :ios do
+
+  before_all do
+    setup_ci if ENV["CI"]
+  end
+
+  # ─── PR Checks ────────────────────────────────────────
+  lane :lint do
+    swiftlint(
+      mode: :lint,
+      strict: true,
+      raise_if_swiftlint_error: true
+    )
+  end
+
+  lane :test do
+    run_tests(
+      project: PROJECT,
+      scheme: "SwiftDeploy-Dev",
+      device: "iPhone 16",
+      code_coverage: true,
+      output_directory: "fastlane/test_output"
+    )
+  end
+
+  # ─── QA → TestFlight ──────────────────────────────────
+  lane :beta do
+    sync_code_signing(
+      type: "appstore",
+      app_identifier: "com.yourname.swiftdeploy.stage",
+      readonly: true
+    )
+    increment_build_number(
+      build_number: ENV["GITHUB_RUN_NUMBER"],
+      xcodeproj: PROJECT
+    )
+    build_app(
+      project: PROJECT,
+      scheme: "SwiftDeploy-QA",
+      configuration: "QA Release",
+      output_directory: "build",
+      output_name: "SwiftDeploy-QA.ipa",
+      export_options: {
+        method: "app-store",
+        provisioningProfiles: {
+          "com.yourname.swiftdeploy.stage" => "match AppStore com.yourname.swiftdeploy.stage"
+        }
+      }
+    )
+    upload_to_testflight(
+      app_identifier: "com.yourname.swiftdeploy.stage",
+      skip_waiting_for_build_processing: true,
+      changelog: changelog_from_git_commits(commits_count: 10)
+    )
+    slack(
+      message: ":rocket: QA build #{ENV['GITHUB_RUN_NUMBER']} uploaded to TestFlight",
+      slack_url: ENV["SLACK_WEBHOOK_URL"],
+      success: true
+    ) if ENV["SLACK_WEBHOOK_URL"]
+  end
+
+  # ─── Production → App Store ───────────────────────────
+  lane :release do
+    sync_code_signing(
+      type: "appstore",
+      app_identifier: "com.yourname.swiftdeploy",
+      readonly: true
+    )
+    increment_build_number(
+      build_number: ENV["GITHUB_RUN_NUMBER"],
+      xcodeproj: PROJECT
+    )
+    build_app(
+      project: PROJECT,
+      scheme: "SwiftDeploy",
+      configuration: "Prod Release",
+      output_directory: "build",
+      output_name: "SwiftDeploy.ipa",
+      export_options: {
+        method: "app-store",
+        provisioningProfiles: {
+          "com.yourname.swiftdeploy" => "match AppStore com.yourname.swiftdeploy"
+        }
+      }
+    )
+    upload_to_app_store(
+      app_identifier: "com.yourname.swiftdeploy",
+      skip_screenshots: true,
+      skip_metadata: false,
+      submit_for_review: false,
+      force: true
+    )
+    slack(
+      message: ":tada: Prod build #{ENV['GITHUB_RUN_NUMBER']} submitted to App Store",
+      slack_url: ENV["SLACK_WEBHOOK_URL"],
+      success: true
+    ) if ENV["SLACK_WEBHOOK_URL"]
+  end
+
+  # ─── Error handler ────────────────────────────────────
+  error do |lane, exception|
+    slack(
+      message: ":x: #{lane} failed: #{exception.message}",
+      slack_url: ENV["SLACK_WEBHOOK_URL"],
+      success: false
+    ) if ENV["SLACK_WEBHOOK_URL"]
+  end
+
+end

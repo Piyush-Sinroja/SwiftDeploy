@@ -1,0 +1,3 @@
+app_identifier("com.yourname.swiftdeploy")
+apple_id("your@apple.id")
+team_id("YOUR10DIGITTEAMID")

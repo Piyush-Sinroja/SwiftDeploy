@@ -1,0 +1,11 @@
+git_url("https://github.com/yourname/swiftdeploy-certs")
+storage_mode("git")
+
+app_identifier([
+  "com.yourname.swiftdeploy",
+  "com.yourname.swiftdeploy.stage",
+  "com.yourname.swiftdeploy.dev"
+])
+
+team_id("YOUR10DIGITTEAMID")
+username("your@apple.id")
