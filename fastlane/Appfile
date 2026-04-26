@@ -1,3 +1,19 @@
-app_identifier("com.yourname.swiftdeploy")
-apple_id("your@apple.id")
-team_id("YOUR10DIGITTEAMID")
+# Appfile
+# Global identity for Fastlane.
+# All values read from environment variables.
+# Local: set values in .env file (never commit .env)
+# CI: set values in GitHub Secrets
+
+# Primary app bundle ID (production)
+app_identifier(ENV["APP_IDENTIFIER_PROD"])
+
+# Apple ID email associated with your Apple Developer account
+apple_id(ENV["APPLE_ID"])
+
+# Apple Developer Team ID (10 characters)
+# Found at: developer.apple.com → Account → Membership
+team_id(ENV["TEAM_ID"])
+
+# App Store Connect Team ID
+# Usually same as team_id but can differ for enterprise accounts
+itc_team_id(ENV["ITC_TEAM_ID"] || ENV["TEAM_ID"])
