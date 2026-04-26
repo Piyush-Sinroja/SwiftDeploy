@@ -1,0 +1,14 @@
+//
+//  Prod.xcconfig
+//  SwiftDeploy
+//
+//  Created by Piyush Sinroja on 26/04/26.
+//
+
+// Configuration settings file format documentation can be found at:
+// https://developer.apple.com/documentation/xcode/adding-a-build-configuration-file-to-your-project
+#include "Base.xcconfig"
+                         
+APP_BUNDLE_ID = com.yourname.swiftdeploy
+APP_NAME = SwiftDeploy
+API_BASE_URL = https:$()/$()/api.yourserver.com

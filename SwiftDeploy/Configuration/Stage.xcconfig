@@ -1,0 +1,15 @@
+//
+//  Stage.xcconfig
+//  SwiftDeploy
+//
+//  Created by Piyush Sinroja on 26/04/26.
+//
+
+// Configuration settings file format documentation can be found at:
+// https://developer.apple.com/documentation/xcode/adding-a-build-configuration-file-to-your-project
+
+#include "Base.xcconfig"
+
+APP_BUNDLE_ID = com.yourname.swiftdeploy.stage
+APP_NAME = SwiftDeploy QA
+API_BASE_URL = https:$()/$()/stage-api.yourserver.com
