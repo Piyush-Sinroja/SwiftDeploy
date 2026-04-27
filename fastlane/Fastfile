@@ -116,52 +116,51 @@ platform :ios do
   # readonly: false locally → create new certs if missing
   # =============================================================
 
-  # Sync Development certificates.
-  # Used for: installing debug builds on physical devices.
+  # Sync Development certificates for ALL bundle IDs.
+  # All 3 bundle IDs need development certs because Dev/Stage/Prod
+  # Debug schemes all run on physical devices using development signing.
   # Run: bundle exec fastlane certs_dev
   lane :certs_dev do
     api_key = asc_api_key
     match(
-      type:             "development",
-      app_identifier:   [ENV["APP_IDENTIFIER_DEV"]],
-      api_key:          api_key,
-      readonly:         ENV["CI"] ? true : false
+      type:           "development",
+      app_identifier: [
+        ENV["APP_IDENTIFIER_DEV"],
+        ENV["APP_IDENTIFIER_QA"],
+        ENV["APP_IDENTIFIER_PROD"]
+      ],
+      api_key:        api_key,
+      readonly:       ENV["CI"] ? true : false,
+      force:          false
     )
   end
 
-  # Sync QA App Store certificates.
-  # Used for: TestFlight QA builds.
-  # Run: bundle exec fastlane certs_qa
-  lane :certs_qa do
+  # Sync App Store certificates for ALL bundle IDs.
+  # Used for: TestFlight (QA) and App Store (Prod) builds.
+  # Both QA and Prod use appstore type certs for distribution.
+  # Dev bundle ID included for completeness (future TestFlight dev builds).
+  # Run: bundle exec fastlane certs_appstore
+  lane :certs_appstore do
     api_key = asc_api_key
     match(
-      type:             "appstore",
-      app_identifier:   [ENV["APP_IDENTIFIER_QA"]],
-      api_key:          api_key,
-      readonly:         ENV["CI"] ? true : false
+      type:           "appstore",
+      app_identifier: [
+        ENV["APP_IDENTIFIER_DEV"],
+        ENV["APP_IDENTIFIER_QA"],
+        ENV["APP_IDENTIFIER_PROD"]
+      ],
+      api_key:        api_key,
+      readonly:       ENV["CI"] ? true : false,
+      force:          false
     )
   end
 
-  # Sync Production App Store certificates.
-  # Used for: App Store production builds.
-  # Run: bundle exec fastlane certs_prod
-  lane :certs_prod do
-    api_key = asc_api_key
-    match(
-      type:             "appstore",
-      app_identifier:   [ENV["APP_IDENTIFIER_PROD"]],
-      api_key:          api_key,
-      readonly:         ENV["CI"] ? true : false
-    )
-  end
-
-  # Sync all certificates at once.
-  # Run this when setting up on a new machine.
+  # Sync ALL certificates at once (development + appstore).
+  # Run this when setting up project on a new machine.
   # bundle exec fastlane certs_all
   lane :certs_all do
     certs_dev
-    certs_qa
-    certs_prod
+    certs_appstore
   end
 
   # Revoke and regenerate ALL certificates from scratch.
@@ -380,7 +379,7 @@ platform :ios do
     api_key   = asc_api_key
     changelog = changelog_from_git_commits(commits_count: 10, pretty: "- %s")
 
-    certs_qa
+    certs_appstore
     bump_build_number
     build_qa_ipa
 
@@ -416,7 +415,7 @@ platform :ios do
 
     changelog = changelog_from_git_commits(commits_count: 20, pretty: "- %s")
 
-    certs_prod
+    certs_appstore
     bump_build_number
     build_prod_ipa
 
