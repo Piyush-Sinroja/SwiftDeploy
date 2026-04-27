@@ -1,20 +1,22 @@
 # =============================================================
 # Hotfix Workflow — Live App Emergency Fix
 # =============================================================
-# Triggers on push to main.
-# main only receives pushes when:
-#   1. release/* is merged after App Store approval
-#   2. hotfix/* is merged for live app critical bugs
+# Triggers on push to main (after hotfix/* PR is merged).
+# main only receives direct pushes for hotfixes.
+# Regular releases merge to main AFTER App Store approval
+# via the release-prod.yml workflow (not this one).
 #
-# This workflow handles case 2 — live app bugs.
-# Builds Prod Release IPA and uploads to App Store Connect.
-# QA smoke tests, then release manager runs submit-review.yml.
+# Hotfix flow:
+#   1. Bug found in live App Store app
+#   2. git checkout -b hotfix/1.1.1 from main
+#   3. Fix + bump_patch (1.1.0 → 1.1.1)
+#   4. PR: hotfix/1.1.1 → main
+#   5. Merge → this workflow triggers → prod build uploaded
+#   6. QA smoke tests → submit_for_review → Apple review
 #
-# Version for hotfixes:
-#   Live app is 1.1.0 → hotfix → 1.1.1 (bump_patch before merge)
-#
-# Build type: Prod Release
-# Destination: Prod App Store Connect (submit_for_review: false)
+# DEBUGGING:
+#   build-logs-release-*  → compile/signing errors
+#   fastlane-report-*     → which step failed and why
 # =============================================================
 
 name: Hotfix — Prod App Store Connect
@@ -24,15 +26,24 @@ on:
     branches:
       - main
 
+  # Manual trigger with cache control
+  workflow_dispatch:
+    inputs:
+      clear_cache:
+        description: 'Skip all caches for a clean build'
+        type: boolean
+        default: false
+
 # No cancel-in-progress — hotfixes are critical
-# Let every push complete even if another comes in
+# Every push must complete even if another arrives
 
 jobs:
   hotfix-build:
     name: Upload Hotfix to Prod App Store Connect
     uses: ./.github/workflows/_reusable-build.yml
     with:
-      lane: release     # same release lane — builds Prod, uploads to App Store Connect
+      lane: release
+      clear_cache: ${{ github.event.inputs.clear_cache == 'true' }}
     secrets:
       APPLE_ID:                      ${{ secrets.APPLE_ID }}
       TEAM_ID:                       ${{ secrets.TEAM_ID }}
@@ -47,3 +58,7 @@ jobs:
       MATCH_PASSWORD:                ${{ secrets.MATCH_PASSWORD }}
       MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
       SLACK_WEBHOOK_URL:             ${{ secrets.SLACK_WEBHOOK_URL }}
+      BETA_CONTACT_EMAIL:            ${{ secrets.BETA_CONTACT_EMAIL }}
+      BETA_CONTACT_FIRST_NAME:       ${{ secrets.BETA_CONTACT_FIRST_NAME }}
+      BETA_CONTACT_LAST_NAME:        ${{ secrets.BETA_CONTACT_LAST_NAME }}
+      BETA_CONTACT_PHONE:            ${{ secrets.BETA_CONTACT_PHONE }}

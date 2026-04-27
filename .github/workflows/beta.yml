@@ -1,14 +1,15 @@
 # =============================================================
 # Beta Workflow — Continuous QA
 # =============================================================
-# Triggers on every push to develop (after PR is merged).
-# Builds Stage Release IPA and uploads to Stage TestFlight.
+# AUTO: Triggers on every push to develop (feature merged).
+# MANUAL: workflow_dispatch with optional cache control.
 #
-# Purpose: QA team gets a new build after every feature merge.
-# They can test each feature as it lands on develop.
-#
-# Build type: Stage Release
-# Destination: Stage TestFlight (com.yourname.swiftdeploy.stage)
+# DEBUGGING:
+#   On failure → check Artifacts section of failed run:
+#   build-logs-beta-*    → xcodebuild output (compile errors)
+#   fastlane-report-beta-* → which Fastlane step failed
+#   IPA-beta-*           → on success, downloadable app
+#   dSYM-beta-*          → on success, crash symbols
 # =============================================================
 
 name: Beta — Stage TestFlight
@@ -18,8 +19,18 @@ on:
     branches:
       - develop
 
-# Cancel in-progress beta if a new commit lands on develop
-# No point finishing old build when newer code is available
+  # Manual trigger — allows cache control when needed
+  workflow_dispatch:
+    inputs:
+      clear_cache:
+        description: 'Skip all caches for a clean build (use when cache causes failures)'
+        type: boolean
+        default: false
+      reason:
+        description: 'Reason for manual trigger (optional)'
+        required: false
+        type: string
+
 concurrency:
   group: beta-${{ github.ref }}
   cancel-in-progress: true
@@ -30,6 +41,7 @@ jobs:
     uses: ./.github/workflows/_reusable-build.yml
     with:
       lane: beta
+      clear_cache: ${{ github.event.inputs.clear_cache == 'true' }}
     secrets:
       APPLE_ID:                      ${{ secrets.APPLE_ID }}
       TEAM_ID:                       ${{ secrets.TEAM_ID }}
@@ -44,3 +56,7 @@ jobs:
       MATCH_PASSWORD:                ${{ secrets.MATCH_PASSWORD }}
       MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
       SLACK_WEBHOOK_URL:             ${{ secrets.SLACK_WEBHOOK_URL }}
+      BETA_CONTACT_EMAIL:            ${{ secrets.BETA_CONTACT_EMAIL }}
+      BETA_CONTACT_FIRST_NAME:       ${{ secrets.BETA_CONTACT_FIRST_NAME }}
+      BETA_CONTACT_LAST_NAME:        ${{ secrets.BETA_CONTACT_LAST_NAME }}
+      BETA_CONTACT_PHONE:            ${{ secrets.BETA_CONTACT_PHONE }}

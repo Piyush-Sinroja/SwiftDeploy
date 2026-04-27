@@ -1,14 +1,21 @@
 # =============================================================
 # PR Checks Workflow
 # =============================================================
-# Triggers on every PR opened/updated targeting develop or main.
-# Three jobs run in this order:
-#   1. lint      → fast fail, no point running tests if lint fails
-#   2. unit-tests → parallel with ui-tests after lint passes
-#   3. ui-tests   → parallel with unit-tests after lint passes
+# Triggers on every PR to develop or main.
+# Jobs run in this order:
+#   lint (fast fail)
+#   unit-tests + ui-tests (parallel after lint)
 #
-# PR cannot be merged unless ALL jobs pass.
-# No code signing needed here — just build and test.
+# CACHE BUSTING:
+#   Add ?clear_cache=true to workflow_dispatch trigger
+#   Or increment CACHE_VERSION below
+#
+# DEBUGGING FAILED TESTS:
+#   Artifacts section of failed run:
+#   test-results-unit-*  → JUnit XML → which tests failed
+#   test-results-ui-*    → JUnit XML → which UI tests failed
+#   xcresult-unit-*      → Xcode bundle → stack traces + screenshots
+#   build-logs-*         → compile errors if build itself failed
 # =============================================================
 
 name: PR Checks
@@ -16,23 +23,30 @@ name: PR Checks
 on:
   pull_request:
     branches:
-      - develop       # feature/* → develop
-      - main          # release/* → main (hotfix PRs)
-    types:
-      - opened        # new PR
-      - synchronize   # new commit pushed to PR
-      - reopened      # PR reopened after close
+      - develop
+      - main
+    types: [opened, synchronize, reopened]
 
-# Cancel in-progress runs for the same PR
-# Prevents wasting CI minutes when developer pushes new commit
+  # Allow manual trigger with cache control
+  workflow_dispatch:
+    inputs:
+      clear_cache:
+        description: 'Skip all caches for a clean build'
+        type: boolean
+        default: false
+
+# Cancel in-progress run when new commit is pushed to same PR
 concurrency:
-  group: pr-checks-${{ github.event.pull_request.number }}
+  group: pr-checks-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
+env:
+  CACHE_VERSION: v1    # Increment to bust all caches permanently
+
 jobs:
-  # ── Job 1: SwiftLint ──────────────────────────────────────
-  # Runs first. Unit and UI tests only start if this passes.
-  # Fast — usually done in under 2 minutes.
+  # ── Job 1: SwiftLint ─────────────────────────────────────────
+  # Runs first. Tests only start after lint passes.
+  # Fail fast — no point running tests if code style is wrong.
   lint:
     name: SwiftLint
     runs-on: macos-15
@@ -50,13 +64,23 @@ jobs:
       - name: Run SwiftLint
         run: bundle exec fastlane lint
 
-  # ── Job 2: Unit Tests ─────────────────────────────────────
-  # Runs after lint passes. Parallel with ui-tests.
-  # Tests only SwiftDeployTests target.
+      # Upload SwiftLint report on failure
+      # Shows exactly which files and lines violated rules
+      - name: Upload SwiftLint Report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: swiftlint-report-${{ github.run_number }}
+          path: fastlane/report.xml
+          retention-days: 3
+          if-no-files-found: ignore
+
+  # ── Job 2: Unit Tests ─────────────────────────────────────────
+  # Runs after lint. Parallel with UI tests.
   unit-tests:
     name: Unit Tests
     runs-on: macos-15
-    needs: lint       # wait for lint to pass first
+    needs: lint
 
     steps:
       - name: Checkout
@@ -65,21 +89,37 @@ jobs:
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode_16.3.app
 
+      - name: Log Xcode Version
+        run: xcodebuild -version
+
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.3'
           bundler-cache: true
 
-      # Cache speeds up incremental compilation on repeat runs
+      # SPM cache for unit tests
+      - name: Cache SPM
+        if: ${{ github.event.inputs.clear_cache != 'true' && hashFiles('**/Package.resolved') != '' }}
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Developer/Xcode/DerivedData/**/SourcePackages/checkouts
+            ~/Library/Caches/org.swift.swiftpm
+          key: ${{ env.CACHE_VERSION }}-spm-${{ runner.os }}-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            ${{ env.CACHE_VERSION }}-spm-${{ runner.os }}-
+
+      # DerivedData cache — separate key for unit tests
       - name: Cache DerivedData
+        if: ${{ github.event.inputs.clear_cache != 'true' }}
         uses: actions/cache@v4
         with:
           path: ~/Library/Developer/Xcode/DerivedData
-          key: derived-${{ runner.os }}-unit-${{ hashFiles('**/*.swift', '**/*.xcconfig') }}
+          key: ${{ env.CACHE_VERSION }}-derived-${{ runner.os }}-unit-${{ hashFiles('**/*.swift', '**/*.xcconfig') }}
           restore-keys: |
-            derived-${{ runner.os }}-unit-
-            derived-${{ runner.os }}-
+            ${{ env.CACHE_VERSION }}-derived-${{ runner.os }}-unit-
+            ${{ env.CACHE_VERSION }}-derived-${{ runner.os }}-
 
       - name: Run Unit Tests
         run: bundle exec fastlane test_unit
@@ -89,23 +129,49 @@ jobs:
           APP_IDENTIFIER_DEV:  ${{ secrets.APP_IDENTIFIER_DEV }}
           CI:                  true
 
-      # Upload test results for review in GitHub Actions UI
-      - name: Upload Test Results
+      # ── Test Artifacts ───────────────────────────────────────
+      # JUnit XML — always upload so failures are visible
+      - name: Upload Unit Test Results
         uses: actions/upload-artifact@v4
-        if: always()    # upload even if tests fail
+        if: always()
         with:
-          name: unit-test-results
+          name: test-results-unit-${{ github.run_number }}
           path: fastlane/test_output/unit_tests.xml
           retention-days: 7
+          if-no-files-found: ignore
 
-  # ── Job 3: UI Tests ───────────────────────────────────────
-  # Runs after lint passes. Parallel with unit-tests.
-  # Tests only SwiftDeployUITests target.
-  # Slower than unit tests — requires full simulator boot.
+      # xcresult bundle — only on failure
+      # Open in Xcode for detailed failure inspection:
+      # File → Open → select .xcresult
+      - name: Upload xcresult on Failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: xcresult-unit-${{ github.run_number }}
+          path: |
+            ~/Library/Developer/Xcode/DerivedData/**/Logs/Test/*.xcresult
+            fastlane/test_output/*.xcresult
+          retention-days: 3
+          if-no-files-found: ignore
+
+      # Build logs — only on failure
+      # Shows compile errors if tests failed to build
+      - name: Upload Build Logs on Failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: build-logs-unit-${{ github.run_number }}
+          path: ~/Library/Logs/scan/
+          retention-days: 3
+          if-no-files-found: ignore
+
+  # ── Job 3: UI Tests ───────────────────────────────────────────
+  # Runs after lint. Parallel with unit tests.
+  # Slower — requires full simulator boot.
   ui-tests:
     name: UI Tests
     runs-on: macos-15
-    needs: lint       # wait for lint to pass first
+    needs: lint
 
     steps:
       - name: Checkout
@@ -114,20 +180,36 @@ jobs:
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode_16.3.app
 
+      - name: Log Xcode Version
+        run: xcodebuild -version
+
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.3'
           bundler-cache: true
 
+      - name: Cache SPM
+        if: ${{ github.event.inputs.clear_cache != 'true' && hashFiles('**/Package.resolved') != '' }}
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Developer/Xcode/DerivedData/**/SourcePackages/checkouts
+            ~/Library/Caches/org.swift.swiftpm
+          key: ${{ env.CACHE_VERSION }}-spm-${{ runner.os }}-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            ${{ env.CACHE_VERSION }}-spm-${{ runner.os }}-
+
+      # Separate DerivedData cache key for UI tests
       - name: Cache DerivedData
+        if: ${{ github.event.inputs.clear_cache != 'true' }}
         uses: actions/cache@v4
         with:
           path: ~/Library/Developer/Xcode/DerivedData
-          key: derived-${{ runner.os }}-ui-${{ hashFiles('**/*.swift', '**/*.xcconfig') }}
+          key: ${{ env.CACHE_VERSION }}-derived-${{ runner.os }}-ui-${{ hashFiles('**/*.swift', '**/*.xcconfig') }}
           restore-keys: |
-            derived-${{ runner.os }}-ui-
-            derived-${{ runner.os }}-
+            ${{ env.CACHE_VERSION }}-derived-${{ runner.os }}-ui-
+            ${{ env.CACHE_VERSION }}-derived-${{ runner.os }}-
 
       - name: Run UI Tests
         run: bundle exec fastlane test_ui
@@ -137,10 +219,33 @@ jobs:
           APP_IDENTIFIER_DEV:  ${{ secrets.APP_IDENTIFIER_DEV }}
           CI:                  true
 
-      - name: Upload Test Results
+      - name: Upload UI Test Results
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ui-test-results
+          name: test-results-ui-${{ github.run_number }}
           path: fastlane/test_output/ui_tests.xml
           retention-days: 7
+          if-no-files-found: ignore
+
+      # UI test xcresult is especially valuable — contains
+      # screenshots at the exact moment of failure
+      - name: Upload xcresult on Failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: xcresult-ui-${{ github.run_number }}
+          path: |
+            ~/Library/Developer/Xcode/DerivedData/**/Logs/Test/*.xcresult
+            fastlane/test_output/*.xcresult
+          retention-days: 3
+          if-no-files-found: ignore
+
+      - name: Upload Build Logs on Failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: build-logs-ui-${{ github.run_number }}
+          path: ~/Library/Logs/scan/
+          retention-days: 3
+          if-no-files-found: ignore
