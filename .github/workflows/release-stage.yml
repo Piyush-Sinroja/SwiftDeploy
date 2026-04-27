@@ -1,0 +1,50 @@
+# =============================================================
+# Release Stage Workflow — Regression QA
+# =============================================================
+# Triggers on every push to any release/* branch.
+# Builds Stage Release IPA ONLY — no prod build generated here.
+#
+# Purpose: QA does full regression on release branch builds.
+# Multiple bug fixes may land on release branch — each gets
+# a new Stage build automatically for QA to retest.
+#
+# Prod build is triggered SEPARATELY via:
+#   - Tag: v*.*.*-rc* (when QA approves Stage)
+#   - Manual: workflow_dispatch in release-prod.yml
+#
+# Build type: Stage Release
+# Destination: Stage TestFlight (com.yourname.swiftdeploy.stage)
+# =============================================================
+
+name: Release — Stage TestFlight
+
+on:
+  push:
+    branches:
+      - 'release/**'    # matches release/1.0.0, release/2.1.0 etc.
+
+# Cancel in-progress build if new fix lands on same release branch
+concurrency:
+  group: release-stage-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  stage-build:
+    name: Upload to Stage TestFlight (Regression)
+    uses: ./.github/workflows/_reusable-build.yml
+    with:
+      lane: beta        # reuses same beta lane — both upload to Stage TestFlight
+    secrets:
+      APPLE_ID:                      ${{ secrets.APPLE_ID }}
+      TEAM_ID:                       ${{ secrets.TEAM_ID }}
+      ITC_TEAM_ID:                   ${{ secrets.ITC_TEAM_ID }}
+      APP_IDENTIFIER_PROD:           ${{ secrets.APP_IDENTIFIER_PROD }}
+      APP_IDENTIFIER_QA:             ${{ secrets.APP_IDENTIFIER_QA }}
+      APP_IDENTIFIER_DEV:            ${{ secrets.APP_IDENTIFIER_DEV }}
+      ASC_KEY_ID:                    ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID:                 ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_CONTENT:               ${{ secrets.ASC_KEY_CONTENT }}
+      MATCH_GIT_URL:                 ${{ secrets.MATCH_GIT_URL }}
+      MATCH_PASSWORD:                ${{ secrets.MATCH_PASSWORD }}
+      MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+      SLACK_WEBHOOK_URL:             ${{ secrets.SLACK_WEBHOOK_URL }}

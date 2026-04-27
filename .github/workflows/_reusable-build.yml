@@ -1,0 +1,138 @@
+# =============================================================
+# Reusable Build Workflow
+# =============================================================
+# Never triggered directly. Called by other workflows via
+# workflow_call. Contains all shared build steps so we never
+# duplicate code across workflows.
+#
+# Usage in other workflows:
+#   jobs:
+#     build:
+#       uses: ./.github/workflows/_reusable-build.yml
+#       with:
+#         lane: beta
+#       secrets: inherit
+# =============================================================
+
+name: Reusable Build
+
+on:
+  workflow_call:
+    inputs:
+      # Fastlane lane to run (beta, release, test_unit etc.)
+      lane:
+        description: 'Fastlane lane to execute'
+        required: true
+        type: string
+      # Xcode version to use — change when upgrading Xcode
+      xcode-version:
+        description: 'Xcode version path'
+        required: false
+        type: string
+        default: '/Applications/Xcode_16.3.app'
+    secrets:
+      APPLE_ID:
+        required: true
+      TEAM_ID:
+        required: true
+      ITC_TEAM_ID:
+        required: false
+      APP_IDENTIFIER_PROD:
+        required: true
+      APP_IDENTIFIER_QA:
+        required: true
+      APP_IDENTIFIER_DEV:
+        required: true
+      ASC_KEY_ID:
+        required: true
+      ASC_ISSUER_ID:
+        required: true
+      ASC_KEY_CONTENT:
+        required: true
+      MATCH_GIT_URL:
+        required: true
+      MATCH_PASSWORD:
+        required: true
+      MATCH_GIT_BASIC_AUTHORIZATION:
+        required: true
+      SLACK_WEBHOOK_URL:
+        required: false
+
+jobs:
+  build:
+    name: Run ${{ inputs.lane }}
+    runs-on: macos-15
+
+    steps:
+      # ── Checkout ───────────────────────────────────────────
+      # fetch-depth 0 = full history needed for
+      # changelog_from_git_commits in Fastfile
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ── Xcode ──────────────────────────────────────────────
+      - name: Select Xcode Version
+        run: sudo xcode-select -s ${{ inputs.xcode-version }}
+
+      # ── Ruby + Fastlane ────────────────────────────────────
+      # bundler-cache: true caches gems between runs
+      # Reads exact versions from Gemfile.lock
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+
+      # ── SPM Cache ──────────────────────────────────────────
+      # Cache key: hash of Package.resolved (exact dependency versions)
+      # Only invalidates when a dependency version changes
+      - name: Cache SPM Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Developer/Xcode/DerivedData/**/SourcePackages/checkouts
+            ~/Library/Caches/org.swift.swiftpm
+          key: spm-${{ runner.os }}-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            spm-${{ runner.os }}-
+
+      # ── DerivedData Cache ───────────────────────────────────
+      # Incremental compilation — only recompile changed files
+      # Separate cache per lane so different schemes don't conflict
+      - name: Cache DerivedData
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: derived-${{ runner.os }}-${{ inputs.lane }}-${{ hashFiles('**/*.swift', '**/*.m', '**/*.xcconfig') }}
+          restore-keys: |
+            derived-${{ runner.os }}-${{ inputs.lane }}-
+            derived-${{ runner.os }}-
+
+      # ── Run Fastlane ────────────────────────────────────────
+      # All secrets injected as environment variables
+      # Fastlane reads them via ENV["SECRET_NAME"]
+      - name: Run Fastlane ${{ inputs.lane }}
+        run: bundle exec fastlane ${{ inputs.lane }}
+        env:
+          # Apple Account
+          APPLE_ID:                      ${{ secrets.APPLE_ID }}
+          TEAM_ID:                       ${{ secrets.TEAM_ID }}
+          ITC_TEAM_ID:                   ${{ secrets.ITC_TEAM_ID }}
+          # Bundle IDs
+          APP_IDENTIFIER_PROD:           ${{ secrets.APP_IDENTIFIER_PROD }}
+          APP_IDENTIFIER_QA:             ${{ secrets.APP_IDENTIFIER_QA }}
+          APP_IDENTIFIER_DEV:            ${{ secrets.APP_IDENTIFIER_DEV }}
+          # App Store Connect API Key
+          ASC_KEY_ID:                    ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID:                 ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_CONTENT:               ${{ secrets.ASC_KEY_CONTENT }}
+          # Fastlane Match
+          MATCH_GIT_URL:                 ${{ secrets.MATCH_GIT_URL }}
+          MATCH_PASSWORD:                ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          # Notifications
+          SLACK_WEBHOOK_URL:             ${{ secrets.SLACK_WEBHOOK_URL }}
+          # CI identifier — tells Fastlane it is running on CI
+          CI:                            true

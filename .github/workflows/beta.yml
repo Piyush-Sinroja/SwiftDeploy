@@ -1,0 +1,46 @@
+# =============================================================
+# Beta Workflow — Continuous QA
+# =============================================================
+# Triggers on every push to develop (after PR is merged).
+# Builds Stage Release IPA and uploads to Stage TestFlight.
+#
+# Purpose: QA team gets a new build after every feature merge.
+# They can test each feature as it lands on develop.
+#
+# Build type: Stage Release
+# Destination: Stage TestFlight (com.yourname.swiftdeploy.stage)
+# =============================================================
+
+name: Beta — Stage TestFlight
+
+on:
+  push:
+    branches:
+      - develop
+
+# Cancel in-progress beta if a new commit lands on develop
+# No point finishing old build when newer code is available
+concurrency:
+  group: beta-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  beta:
+    name: Upload to Stage TestFlight
+    uses: ./.github/workflows/_reusable-build.yml
+    with:
+      lane: beta
+    secrets:
+      APPLE_ID:                      ${{ secrets.APPLE_ID }}
+      TEAM_ID:                       ${{ secrets.TEAM_ID }}
+      ITC_TEAM_ID:                   ${{ secrets.ITC_TEAM_ID }}
+      APP_IDENTIFIER_PROD:           ${{ secrets.APP_IDENTIFIER_PROD }}
+      APP_IDENTIFIER_QA:             ${{ secrets.APP_IDENTIFIER_QA }}
+      APP_IDENTIFIER_DEV:            ${{ secrets.APP_IDENTIFIER_DEV }}
+      ASC_KEY_ID:                    ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID:                 ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_CONTENT:               ${{ secrets.ASC_KEY_CONTENT }}
+      MATCH_GIT_URL:                 ${{ secrets.MATCH_GIT_URL }}
+      MATCH_PASSWORD:                ${{ secrets.MATCH_PASSWORD }}
+      MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+      SLACK_WEBHOOK_URL:             ${{ secrets.SLACK_WEBHOOK_URL }}

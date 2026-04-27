@@ -1,0 +1,49 @@
+# =============================================================
+# Hotfix Workflow — Live App Emergency Fix
+# =============================================================
+# Triggers on push to main.
+# main only receives pushes when:
+#   1. release/* is merged after App Store approval
+#   2. hotfix/* is merged for live app critical bugs
+#
+# This workflow handles case 2 — live app bugs.
+# Builds Prod Release IPA and uploads to App Store Connect.
+# QA smoke tests, then release manager runs submit-review.yml.
+#
+# Version for hotfixes:
+#   Live app is 1.1.0 → hotfix → 1.1.1 (bump_patch before merge)
+#
+# Build type: Prod Release
+# Destination: Prod App Store Connect (submit_for_review: false)
+# =============================================================
+
+name: Hotfix — Prod App Store Connect
+
+on:
+  push:
+    branches:
+      - main
+
+# No cancel-in-progress — hotfixes are critical
+# Let every push complete even if another comes in
+
+jobs:
+  hotfix-build:
+    name: Upload Hotfix to Prod App Store Connect
+    uses: ./.github/workflows/_reusable-build.yml
+    with:
+      lane: release     # same release lane — builds Prod, uploads to App Store Connect
+    secrets:
+      APPLE_ID:                      ${{ secrets.APPLE_ID }}
+      TEAM_ID:                       ${{ secrets.TEAM_ID }}
+      ITC_TEAM_ID:                   ${{ secrets.ITC_TEAM_ID }}
+      APP_IDENTIFIER_PROD:           ${{ secrets.APP_IDENTIFIER_PROD }}
+      APP_IDENTIFIER_QA:             ${{ secrets.APP_IDENTIFIER_QA }}
+      APP_IDENTIFIER_DEV:            ${{ secrets.APP_IDENTIFIER_DEV }}
+      ASC_KEY_ID:                    ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID:                 ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_CONTENT:               ${{ secrets.ASC_KEY_CONTENT }}
+      MATCH_GIT_URL:                 ${{ secrets.MATCH_GIT_URL }}
+      MATCH_PASSWORD:                ${{ secrets.MATCH_PASSWORD }}
+      MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+      SLACK_WEBHOOK_URL:             ${{ secrets.SLACK_WEBHOOK_URL }}
