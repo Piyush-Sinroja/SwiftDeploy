@@ -422,7 +422,7 @@ platform :ios do
   # Triggered by:
   #   - push to develop (continuous QA — after each feature merge)
   #   - push to release/* (regression QA — during release preparation)
-  lane :beta do
+  lane :upload_testflight_stage do
     api_key   = asc_api_key
     changelog = changelog_from_git_commits(commits_count: 10, pretty: "- %s")
 
@@ -470,7 +470,7 @@ platform :ios do
   #   - tag v*.*.*-rc* (after QA approves Stage regression)
   #   - manual workflow_dispatch
   #   - push to main (hotfixes)
-  lane :release do
+  lane :upload_appstore_prod do
     api_key   = asc_api_key
     changelog = changelog_from_git_commits(commits_count: 20, pretty: "- %s")
 
@@ -504,8 +504,8 @@ platform :ios do
   # ALWAYS run manually after QA approves the prod build.
   # Does NOT upload a new binary — submits what is already
   # sitting in App Store Connect from the release lane.
-  # bundle exec fastlane submit_for_review
-  lane :submit_for_review do
+  # bundle exec fastlane submit_appstore_review
+  lane :submit_appstore_review do
     api_key = asc_api_key
     deliver(
       api_key:            api_key,

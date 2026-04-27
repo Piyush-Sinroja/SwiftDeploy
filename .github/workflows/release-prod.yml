@@ -63,7 +63,7 @@ jobs:
     name: Upload to Prod App Store Connect
     uses: ./.github/workflows/_reusable-build.yml
     with:
-      lane: release
+      lane: upload_appstore_prod
       clear_cache: ${{ github.event.inputs.clear_cache == 'true' }}
     secrets:
       APPLE_ID:                      ${{ secrets.APPLE_ID }}

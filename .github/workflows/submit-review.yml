@@ -71,7 +71,7 @@ jobs:
     needs: validate
     uses: ./.github/workflows/_reusable-build.yml
     with:
-      lane: submit_for_review
+      lane: submit_appstore_review
     secrets:
       APPLE_ID:                      ${{ secrets.APPLE_ID }}
       TEAM_ID:                       ${{ secrets.TEAM_ID }}
