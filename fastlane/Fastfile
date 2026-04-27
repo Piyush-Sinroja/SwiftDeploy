@@ -241,18 +241,34 @@ platform :ios do
   # SECTION 5 — Version and Build Number Management
   # =============================================================
 
-  # Bump build number.
-  # On CI: uses GitHub Actions run number (always incrementing).
-  # Locally: increments by 1 from current value.
-  private_lane :bump_build_number do
-    if ENV["CI"]
-      increment_build_number(
-        build_number: ENV["GITHUB_RUN_NUMBER"],
-        xcodeproj:    PROJECT
-      )
-    else
-      increment_build_number(xcodeproj: PROJECT)
-    end
+  # Bump build number using TestFlight as source of truth.
+  # Fetches latest build number from TestFlight then increments by 1.
+  # This prevents conflicts regardless of where builds come from —
+  # CI, manual Xcode upload, or another machine.
+  # Falls back to simple increment if TestFlight fetch fails (first build).
+  private_lane :bump_build_number do |options|
+    api_key    = asc_api_key
+    bundle_id  = options[:bundle_id] || ENV["APP_IDENTIFIER_QA"]
+    version    = get_version_number(xcodeproj: PROJECT)
+
+    # Fetch latest build number from TestFlight
+    # initial_build_number: 0 means if no builds exist yet, start from 0
+    latest_build = latest_testflight_build_number(
+      api_key:              api_key,
+      app_identifier:       bundle_id,
+      version:              version,
+      initial_build_number: 0
+    )
+
+    new_build = latest_build + 1
+
+    increment_build_number(
+      build_number: new_build,
+      xcodeproj:    PROJECT
+    )
+
+    UI.success("Build number set to #{new_build} (was #{latest_build} on TestFlight)")
+    new_build
   end
 
   # Bump patch version (1.0.0 → 1.0.1).
@@ -380,7 +396,7 @@ platform :ios do
     changelog = changelog_from_git_commits(commits_count: 10, pretty: "- %s")
 
     certs_appstore
-    bump_build_number
+    bump_build_number(bundle_id: ENV["APP_IDENTIFIER_QA"])
     build_qa_ipa
 
     upload_to_testflight(
@@ -416,7 +432,7 @@ platform :ios do
     changelog = changelog_from_git_commits(commits_count: 20, pretty: "- %s")
 
     certs_appstore
-    bump_build_number
+    bump_build_number(bundle_id: ENV["APP_IDENTIFIER_PROD"])
     build_prod_ipa
 
     upload_to_app_store(
