@@ -200,10 +200,16 @@ platform :ios do
       api_key: api_key
     )
 
-    # Refresh dev provisioning profile to include new device
+    # Refresh development provisioning profiles for ALL bundle IDs.
+    # All 3 are needed because Dev/Stage/Prod Debug schemes all
+    # use development signing when running on a physical device.
     match(
       type:                  "development",
-      app_identifier:        [ENV["APP_IDENTIFIER_DEV"]],
+      app_identifier:        [
+        ENV["APP_IDENTIFIER_DEV"],
+        ENV["APP_IDENTIFIER_QA"],
+        ENV["APP_IDENTIFIER_PROD"]
+      ],
       api_key:               api_key,
       readonly:              false,
       force_for_new_devices: true
@@ -221,7 +227,11 @@ platform :ios do
     api_key = asc_api_key
     match(
       type:                  "development",
-      app_identifier:        [ENV["APP_IDENTIFIER_DEV"]],
+      app_identifier:        [
+        ENV["APP_IDENTIFIER_DEV"],
+        ENV["APP_IDENTIFIER_QA"],
+        ENV["APP_IDENTIFIER_PROD"]
+      ],
       api_key:               api_key,
       readonly:              false,
       force_for_new_devices: true
