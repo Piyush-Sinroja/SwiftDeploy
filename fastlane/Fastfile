@@ -30,9 +30,10 @@
 
 default_platform(:ios)
 
-# ─── Project Constants ────────────────────────────────────────
-# Single source of truth for all project identifiers.
-# Change here if you rename project or schemes.
+# =============================================================
+# Project Constants
+# =============================================================
+# Change these if you rename the project, schemes, or configs.
 APP_NAME        = "SwiftDeploy"
 PROJECT         = "#{APP_NAME}.xcodeproj"
 WORKSPACE       = "#{APP_NAME}.xcworkspace"
@@ -47,6 +48,56 @@ OUTPUT_DIR      = "build"
 
 # Use workspace if CocoaPods exists, project otherwise
 USE_WORKSPACE   = File.exist?(WORKSPACE)
+
+# =============================================================
+# Bundle Identifiers
+# =============================================================
+# Three separate bundle IDs = three separate apps on device.
+# DEV   → local development only, never uploaded to Apple
+# QA    → TestFlight internal testing (QA team)
+# PROD  → App Store public release
+APP_ID_DEV      = ENV["APP_IDENTIFIER_DEV"]
+APP_ID_QA       = ENV["APP_IDENTIFIER_QA"]
+APP_ID_PROD     = ENV["APP_IDENTIFIER_PROD"]
+
+# =============================================================
+# Apple Account
+# =============================================================
+APPLE_ID        = ENV["APPLE_ID"]
+TEAM_ID         = ENV["TEAM_ID"]
+ITC_TEAM_ID     = ENV["ITC_TEAM_ID"]
+
+# =============================================================
+# App Store Connect API Key
+# =============================================================
+# API key auth — no 2FA prompts on CI, never expires.
+# Create at: App Store Connect → Users → Integrations → API Keys
+ASC_KEY_ID      = ENV["ASC_KEY_ID"]
+ASC_ISSUER_ID   = ENV["ASC_ISSUER_ID"]
+ASC_KEY_CONTENT = ENV["ASC_KEY_CONTENT"]
+
+# =============================================================
+# Fastlane Match — Code Signing
+# =============================================================
+# Private GitHub repo storing encrypted certs and profiles.
+MATCH_GIT_URL   = ENV["MATCH_GIT_URL"]
+MATCH_PASSWORD  = ENV["MATCH_PASSWORD"]
+
+# =============================================================
+# TestFlight Beta Review Contact
+# =============================================================
+# Apple contacts these details if they have questions.
+# Required for first-time TestFlight submission.
+BETA_EMAIL      = ENV["BETA_CONTACT_EMAIL"]
+BETA_FIRST_NAME = ENV["BETA_CONTACT_FIRST_NAME"]
+BETA_LAST_NAME  = ENV["BETA_CONTACT_LAST_NAME"]
+BETA_PHONE      = ENV["BETA_CONTACT_PHONE"]
+
+# =============================================================
+# Notifications
+# =============================================================
+# Leave empty to disable Slack notifications entirely.
+SLACK_WEBHOOK   = ENV["SLACK_WEBHOOK_URL"]
 
 platform :ios do
 
@@ -68,9 +119,9 @@ platform :ios do
   # API key auth = no 2FA prompts, more secure, never expires.
   private_lane :asc_api_key do
     app_store_connect_api_key(
-      key_id:                ENV["ASC_KEY_ID"],
-      issuer_id:             ENV["ASC_ISSUER_ID"],
-      key_content:           ENV["ASC_KEY_CONTENT"],
+      key_id:                ASC_KEY_ID,
+      issuer_id:             ASC_ISSUER_ID,
+      key_content:           ASC_KEY_CONTENT,
       is_key_content_base64: false,
       in_house:              false
     )
@@ -92,9 +143,9 @@ platform :ios do
   # Reads from ENV variables — never hardcoded.
   private_lane :get_bundle_id do |options|
     case options[:environment]
-    when "dev"  then ENV["APP_IDENTIFIER_DEV"]
-    when "qa"   then ENV["APP_IDENTIFIER_QA"]
-    when "prod" then ENV["APP_IDENTIFIER_PROD"]
+    when "dev"  then APP_ID_DEV
+    when "qa"   then APP_ID_QA
+    when "prod" then APP_ID_PROD
     else
       UI.user_error!("Unknown environment: #{options[:environment]}. Use dev, qa or prod.")
     end
@@ -136,9 +187,9 @@ platform :ios do
     match(
       type:                  "development",
       app_identifier:        [
-        ENV["APP_IDENTIFIER_DEV"],
-        ENV["APP_IDENTIFIER_QA"],
-        ENV["APP_IDENTIFIER_PROD"]
+        APP_ID_DEV,
+        APP_ID_QA,
+        APP_ID_PROD
       ],
       api_key:               api_key,
       readonly:              false,
@@ -159,9 +210,9 @@ platform :ios do
     match(
       type:                  "development",
       app_identifier:        [
-        ENV["APP_IDENTIFIER_DEV"],
-        ENV["APP_IDENTIFIER_QA"],
-        ENV["APP_IDENTIFIER_PROD"]
+        APP_ID_DEV,
+        APP_ID_QA,
+        APP_ID_PROD
       ],
       api_key:               api_key,
       readonly:              false,
@@ -187,9 +238,9 @@ platform :ios do
     match(
       type:           "development",
       app_identifier: [
-        ENV["APP_IDENTIFIER_DEV"],
-        ENV["APP_IDENTIFIER_QA"],
-        ENV["APP_IDENTIFIER_PROD"]
+        APP_ID_DEV,
+        APP_ID_QA,
+        APP_ID_PROD
       ],
       api_key:        api_key,
       readonly:       ENV["CI"] ? true : false,
@@ -205,8 +256,8 @@ platform :ios do
     match(
       type:           "appstore",
       app_identifier: [
-        ENV["APP_IDENTIFIER_QA"],
-        ENV["APP_IDENTIFIER_PROD"]
+        APP_ID_QA,
+        APP_ID_PROD
       ],
       api_key:        api_key,
       readonly:       ENV["CI"] ? true : false,
@@ -435,7 +486,7 @@ platform :ios do
       clean:            true,
       include_symbols:  true,
       export_method:    export_method,
-      export_team_id:   ENV["TEAM_ID"],
+      export_team_id:   TEAM_ID,
       output_directory: OUTPUT_DIR,
       output_name:      "#{APP_NAME}-#{env.capitalize}.ipa",
       xcargs:           "-parallelizeTargets",
@@ -478,12 +529,12 @@ platform :ios do
     changelog = changelog_from_git_commits(commits_count: 10, pretty: "- %s")
 
     certs_appstore
-    set_build_number(bundle_id: ENV["APP_IDENTIFIER_QA"])
+    set_build_number(bundle_id: APP_ID_QA)
     result = build_ipa_for_environment(environment: "qa")
 
     upload_to_testflight(
       api_key:                           api_key,
-      app_identifier:                    ENV["APP_IDENTIFIER_QA"],
+      app_identifier:                    APP_ID_QA,
       ipa:                               result[:ipa_path],
       # Do not wait for Apple processing — build appears in
       # TestFlight 5-30 min after upload when Apple finishes
@@ -494,13 +545,13 @@ platform :ios do
       # Contact Apple uses if they have questions about the build.
       # Required for first-time TestFlight submissions.
       beta_app_review_info: {
-        contact_email:      ENV["BETA_CONTACT_EMAIL"],
-        contact_first_name: ENV["BETA_CONTACT_FIRST_NAME"],
-        contact_last_name:  ENV["BETA_CONTACT_LAST_NAME"],
-        contact_phone:      ENV["BETA_CONTACT_PHONE"]
+        contact_email:      BETA_EMAIL,
+        contact_first_name: BETA_FIRST_NAME,
+        contact_last_name:  BETA_LAST_NAME,
+        contact_phone:      BETA_PHONE
       },
       beta_app_description:    "#{APP_NAME} QA build for internal testing",
-      beta_app_feedback_email: ENV["BETA_CONTACT_EMAIL"],
+      beta_app_feedback_email: BETA_EMAIL,
       changelog:               changelog,
       distribute_external:     false,
       notify_external_testers: false
@@ -531,12 +582,12 @@ platform :ios do
     ensure_git_status_clean
 
     certs_appstore
-    set_build_number(bundle_id: ENV["APP_IDENTIFIER_PROD"])
+    set_build_number(bundle_id: APP_ID_PROD)
     result = build_ipa_for_environment(environment: "prod")
 
     upload_to_app_store(
       api_key:           api_key,
-      app_identifier:    ENV["APP_IDENTIFIER_PROD"],
+      app_identifier:    APP_ID_PROD,
       ipa:               result[:ipa_path],
       skip_screenshots:  true,
       skip_metadata:     true,
@@ -562,7 +613,7 @@ platform :ios do
     api_key = asc_api_key
     deliver(
       api_key:            api_key,
-      app_identifier:     ENV["APP_IDENTIFIER_PROD"],
+      app_identifier:     APP_ID_PROD,
       submit_for_review:  true,
       # Manually release after Apple approves — not auto-release
       automatic_release:  false,
@@ -614,7 +665,7 @@ platform :ios do
     api_key = asc_api_key
     upload_to_app_store(
       api_key:            api_key,
-      app_identifier:     ENV["APP_IDENTIFIER_PROD"],
+      app_identifier:     APP_ID_PROD,
       skip_binary_upload: true,
       skip_metadata:      true,
       skip_screenshots:   false,
@@ -629,7 +680,7 @@ platform :ios do
     api_key = asc_api_key
     upload_to_app_store(
       api_key:            api_key,
-      app_identifier:     ENV["APP_IDENTIFIER_PROD"],
+      app_identifier:     APP_ID_PROD,
       skip_binary_upload: true,
       skip_screenshots:   true,
       skip_metadata:      false,
@@ -646,11 +697,11 @@ platform :ios do
   # Silently skips if SLACK_WEBHOOK_URL is not configured.
   # Slack is fully optional — no crash if not set up.
   private_lane :send_slack_notification do |options|
-    next unless ENV["SLACK_WEBHOOK_URL"]
+    next unless SLACK_WEBHOOK
 
     slack(
       message:          options[:message],
-      slack_url:        ENV["SLACK_WEBHOOK_URL"],
+      slack_url:        SLACK_WEBHOOK,
       success:          options.fetch(:success, true),
       default_payloads: [],
       payload: {
