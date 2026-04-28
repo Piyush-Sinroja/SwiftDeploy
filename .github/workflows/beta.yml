@@ -1,7 +1,7 @@
 # =============================================================
 # Beta Workflow — Continuous QA
 # =============================================================
-# AUTO: Triggers on every push to develop (feature merged).
+# AUTO: Triggers on every push to dev (feature merged).
 # MANUAL: workflow_dispatch with optional cache control.
 #
 # DEBUGGING:
@@ -17,7 +17,7 @@ name: Beta — Stage TestFlight
 on:
   push:
     branches:
-      - develop
+      - dev
 
   # Manual trigger — allows cache control when needed
   workflow_dispatch:
