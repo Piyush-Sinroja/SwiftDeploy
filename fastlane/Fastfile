@@ -52,13 +52,14 @@ USE_WORKSPACE   = File.exist?(WORKSPACE)
 # =============================================================
 # Bundle Identifiers
 # =============================================================
-# Three separate bundle IDs = three separate apps on device.
+# Hardcoded — bundle IDs are public (visible in App Store and
+# xcconfig files committed to repo). No need for env vars.
 # DEV   → local development only, never uploaded to Apple
 # QA    → TestFlight internal testing (QA team)
 # PROD  → App Store public release
-APP_ID_DEV      = ENV["APP_IDENTIFIER_DEV"]
-APP_ID_QA       = ENV["APP_IDENTIFIER_QA"]
-APP_ID_PROD     = ENV["APP_IDENTIFIER_PROD"]
+APP_ID_DEV      = "com.piyushsinroja.swiftdeploy.dev"
+APP_ID_QA       = "com.piyushsinroja.swiftdeploy.stage"
+APP_ID_PROD     = "com.piyushsinroja.swiftdeploy"
 
 # =============================================================
 # Apple Account
@@ -86,11 +87,12 @@ MATCH_PASSWORD  = ENV["MATCH_PASSWORD"]
 # =============================================================
 # TestFlight Beta Review Contact
 # =============================================================
-# Apple contacts these details if they have questions.
-# Required for first-time TestFlight submission.
+# Apple contacts these details if they have questions about the build.
+# First/last name hardcoded — not sensitive.
+# Email and phone from ENV — personal info kept out of repo.
 BETA_EMAIL      = ENV["BETA_CONTACT_EMAIL"]
-BETA_FIRST_NAME = ENV["BETA_CONTACT_FIRST_NAME"]
-BETA_LAST_NAME  = ENV["BETA_CONTACT_LAST_NAME"]
+BETA_FIRST_NAME = "Piyush"
+BETA_LAST_NAME  = "Sinroja"
 BETA_PHONE      = ENV["BETA_CONTACT_PHONE"]
 
 # =============================================================
