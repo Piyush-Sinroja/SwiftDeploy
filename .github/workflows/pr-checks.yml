@@ -23,7 +23,7 @@ name: PR Checks
 on:
   pull_request:
     branches:
-      - develop
+      - dev
       - main
     types: [opened, synchronize, reopened]
 
