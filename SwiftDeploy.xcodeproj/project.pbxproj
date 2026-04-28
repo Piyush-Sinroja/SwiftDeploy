@@ -31,7 +31,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		1CC4AB642F9E33F500CD4306 /* SwiftDeploy Dev.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "SwiftDeploy Dev.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		1CC4AB642F9E33F500CD4306 /* SwiftDeploy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SwiftDeploy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1CC4AB712F9E33F700CD4306 /* SwiftDeployTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SwiftDeployTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		1CC4AB7B2F9E33F700CD4306 /* SwiftDeployUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SwiftDeployUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		1CD0A3662FA0DD8A00F90536 /* SwiftDeploy-Dev.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = "SwiftDeploy-Dev.xctestplan"; sourceTree = "<group>"; };
@@ -111,7 +111,7 @@
 		1CC4AB652F9E33F500CD4306 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				1CC4AB642F9E33F500CD4306 /* SwiftDeploy Dev.app */,
+				1CC4AB642F9E33F500CD4306 /* SwiftDeploy.app */,
 				1CC4AB712F9E33F700CD4306 /* SwiftDeployTests.xctest */,
 				1CC4AB7B2F9E33F700CD4306 /* SwiftDeployUITests.xctest */,
 			);
@@ -144,7 +144,7 @@
 				1CC4AC282F9FC1B500CD4306 /* SwiftyBeaver */,
 			);
 			productName = SwiftDeploy;
-			productReference = 1CC4AB642F9E33F500CD4306 /* SwiftDeploy Dev.app */;
+			productReference = 1CC4AB642F9E33F500CD4306 /* SwiftDeploy.app */;
 			productType = "com.apple.product-type.application";
 		};
 		1CC4AB702F9E33F700CD4306 /* SwiftDeployTests */ = {
@@ -311,6 +311,7 @@
 			baseConfigurationReferenceRelativePath = Configuration/Dev.xcconfig;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon-Dev";
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
@@ -459,6 +460,7 @@
 			baseConfigurationReferenceRelativePath = Configuration/Dev.xcconfig;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon-Dev";
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
