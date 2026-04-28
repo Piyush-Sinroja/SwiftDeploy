@@ -3,8 +3,8 @@
 //  SwiftDeployTests
 //
 
-import XCTest
 @testable import SwiftDeploy
+import XCTest
 
 final class SwiftDeployTests: XCTestCase {
 
