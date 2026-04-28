@@ -122,7 +122,10 @@ platform :ios do
       key_id:                ASC_KEY_ID,
       issuer_id:             ASC_ISSUER_ID,
       key_content:           ASC_KEY_CONTENT,
-      is_key_content_base64: false,
+      # true = ASC_KEY_CONTENT is base64 encoded .p8 content
+      # Required when storing key in .env or GitHub Secrets
+      # to avoid newline corruption issues with multiline content
+      is_key_content_base64: true,
       in_house:              false
     )
   end
