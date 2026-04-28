@@ -61,6 +61,11 @@ jobs:
           ruby-version: '3.3'
           bundler-cache: true
 
+      # Install SwiftLint via Homebrew
+      # Homebrew is pre-installed on macos-15 runners
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
       - name: Run SwiftLint
         run: bundle exec fastlane lint
 

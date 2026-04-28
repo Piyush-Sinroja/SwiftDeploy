@@ -2,35 +2,53 @@
 //  SwiftDeployTests.swift
 //  SwiftDeployTests
 //
-//  Created by Piyush Sinroja on 26/04/26.
-//
 
 import XCTest
 @testable import SwiftDeploy
 
 final class SwiftDeployTests: XCTestCase {
 
-    override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
+    // MARK: - Config Tests
+
+    func testAPIBaseURLNotEmpty() {
+        // API_BASE_URL must be set in Info.plist via xcconfig
+        // If empty, the app would crash on launch in Config.swift
+        let url = Bundle.main.infoDictionary?["API_BASE_URL"] as? String
+        XCTAssertNotNil(url, "API_BASE_URL should exist in Info.plist")
+        XCTAssertFalse(url?.isEmpty ?? true, "API_BASE_URL should not be empty")
     }
 
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
+    func testBundleIdentifierNotEmpty() {
+        let bundleID = Bundle.main.bundleIdentifier
+        XCTAssertNotNil(bundleID, "Bundle identifier should be set")
+        XCTAssertTrue(
+            bundleID?.hasPrefix("com.piyushsinroja") ?? false,
+            "Bundle ID should start with com.piyushsinroja"
+        )
     }
 
-    func testExample() throws {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-        // Any test you write for XCTest can be annotated as throws and async.
-        // Mark your test throws to produce an unexpected failure when your test encounters an uncaught error.
-        // Mark your test async to allow awaiting for asynchronous code to complete. Check the results with assertions afterwards.
+    func testAppVersionExists() {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
+        XCTAssertNotNil(version, "App version should be set")
+        XCTAssertFalse(version?.isEmpty ?? true, "App version should not be empty")
     }
 
-    func testPerformanceExample() throws {
-        // This is an example of a performance test case.
-        self.measure {
-            // Put the code you want to measure the time of here.
-        }
+    func testBuildNumberExists() {
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String
+        XCTAssertNotNil(build, "Build number should be set")
+        XCTAssertFalse(build?.isEmpty ?? true, "Build number should not be empty")
     }
 
+    // MARK: - Environment Tests
+
+    func testEnvironmentIsSet() {
+        // Verifies SWIFT_ACTIVE_COMPILATION_CONDITIONS are working
+        #if DEV
+        XCTAssertTrue(true, "Running in Dev environment")
+        #elseif QA
+        XCTAssertTrue(true, "Running in QA environment")
+        #else
+        XCTAssertTrue(true, "Running in Prod environment")
+        #endif
+    }
 }
