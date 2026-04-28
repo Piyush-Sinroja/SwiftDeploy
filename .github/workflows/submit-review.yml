@@ -1,0 +1,85 @@
+# =============================================================
+# Submit for Review Workflow — Manual Only
+# =============================================================
+# ALWAYS manual. Never triggered automatically.
+#
+# When to run:
+#   1. QA has approved the Prod build on internal TestFlight
+#   2. Release manager confirms: "this build goes to Apple"
+#   3. Go to GitHub Actions → Submit for Review → Run workflow
+#
+# What it does:
+#   Calls fastlane submit_for_review lane which submits the
+#   EXISTING build already in App Store Connect for Apple review.
+#   Does NOT create a new build or upload a new binary.
+#   The exact binary QA approved goes to Apple review.
+#
+# After running:
+#   Apple review takes 1-3 days typically.
+#   After approval — merge release branch to main and develop.
+#   Tag main with version: git tag v1.1.0
+# =============================================================
+
+name: Submit for App Store Review
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version being submitted (e.g. 1.1.0) — for confirmation only'
+        required: true
+        type: string
+      build_number:
+        description: 'Build number QA approved (e.g. 5) — for confirmation only'
+        required: true
+        type: string
+      release_notes:
+        description: 'Brief release notes (what changed in this version)'
+        required: true
+        type: string
+      confirmed:
+        description: 'I confirm QA has approved this build and it is ready for App Store review'
+        required: true
+        type: boolean
+        default: false
+
+jobs:
+  # ── Validation ────────────────────────────────────────────
+  # Prevent accidental submission if confirmed is false
+  validate:
+    name: Validate Submission
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Confirmation
+        if: ${{ github.event.inputs.confirmed != 'true' }}
+        run: |
+          echo "❌ Submission not confirmed."
+          echo "Please check the 'I confirm QA has approved' checkbox."
+          exit 1
+
+      - name: Log Submission Details
+        run: |
+          echo "✅ Submitting for App Store Review"
+          echo "Version:      ${{ github.event.inputs.version }}"
+          echo "Build Number: ${{ github.event.inputs.build_number }}"
+          echo "Submitted by: ${{ github.actor }}"
+          echo "Notes: ${{ github.event.inputs.release_notes }}"
+
+  # ── Submit for Review ─────────────────────────────────────
+  submit:
+    name: Submit to Apple Review
+    needs: validate
+    uses: ./.github/workflows/_reusable-build.yml
+    with:
+      lane: submit_appstore_review
+    secrets:
+      APPLE_ID:                      ${{ secrets.APPLE_ID }}
+      TEAM_ID:                       ${{ secrets.TEAM_ID }}
+      ITC_TEAM_ID:                   ${{ secrets.ITC_TEAM_ID }}
+      ASC_KEY_ID:                    ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID:                 ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_CONTENT:               ${{ secrets.ASC_KEY_CONTENT }}
+      MATCH_GIT_URL:                 ${{ secrets.MATCH_GIT_URL }}
+      MATCH_PASSWORD:                ${{ secrets.MATCH_PASSWORD }}
+      MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+      SLACK_WEBHOOK_URL:             ${{ secrets.SLACK_WEBHOOK_URL }}

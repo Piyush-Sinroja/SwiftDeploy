@@ -1,0 +1,84 @@
+# =============================================================
+# SwiftLint Configuration
+# =============================================================
+# Docs: https://github.com/realm/SwiftLint
+# Run locally: bundle exec fastlane lint
+# Run on CI: automatic on every PR
+
+# ─── Paths ───────────────────────────────────────────────────
+included:
+  - SwiftDeploy
+  - SwiftDeployTests
+  - SwiftDeployUITests
+
+excluded:
+  - SwiftDeploy/Core/Configuration    # auto-generated or boilerplate
+  - Pods
+  - .build
+
+# ─── Rules — Disabled ────────────────────────────────────────
+disabled_rules:
+  - trailing_whitespace              # editor handles this
+  - todo                             # TODOs are tracked in tickets
+
+# ─── Rules — Opt In ──────────────────────────────────────────
+# These rules are not enabled by default but are good practice
+opt_in_rules:
+  - empty_count                      # prefer .isEmpty over .count == 0
+  - empty_string                     # prefer .isEmpty over == ""
+  - closure_spacing                  # consistent closure spacing
+  - contains_over_first_not_nil      # prefer contains over first != nil
+  - explicit_init                    # avoid redundant .init()
+  - fatal_error_message              # fatalError must have a message
+  - first_where                      # prefer first(where:) over filter().first
+  - force_unwrapping                 # warn on force unwrap
+  - implicitly_unwrapped_optional    # warn on implicitly unwrapped optional
+  - last_where                       # prefer last(where:)
+  - modifier_order                   # consistent modifier order
+  - operator_usage_whitespace        # consistent operator spacing
+  - prefer_self_type_over_type_of_self
+  - redundant_nil_coalescing         # remove redundant ?? nil
+  - sorted_imports                   # alphabetical imports
+  - toggle_bool                      # prefer .toggle() over = !x
+
+# ─── Rule Configuration ───────────────────────────────────────
+line_length:
+  warning: 120
+  error: 200
+  ignores_comments: true
+  ignores_urls: true
+
+function_body_length:
+  warning: 50
+  error: 100
+
+type_body_length:
+  warning: 300
+  error: 500
+
+file_length:
+  warning: 500
+  error: 800
+
+cyclomatic_complexity:
+  warning: 10
+  error: 20
+
+identifier_name:
+  min_length:
+    warning: 2
+    error: 1
+  excluded:
+    - id
+    - x
+    - y
+    - i
+    - db
+
+# ─── Custom Rules ─────────────────────────────────────────────
+custom_rules:
+  no_print:
+    name: "No Print Statements"
+    message: "Use SwiftyBeaver logger instead of print(). Logger is stripped in Release builds."
+    regex: '^\s*print\('
+    severity: warning

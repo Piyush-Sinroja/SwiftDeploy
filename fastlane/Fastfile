@@ -1,113 +1,771 @@
+# =============================================================
+# SwiftDeploy — Production Fastfile
+# =============================================================
+# All sensitive values read from ENV variables.
+# Local  → create .env from .env.template and fill values
+# CI     → values injected from GitHub Secrets
+#
+# Branch strategy:
+#   feature/* → develop  : PR checks (lint + tests)
+#   develop push         : upload_testflight_stage → Stage TestFlight
+#   release/* push       : upload_testflight_stage → Stage TestFlight
+#   tag v*.*.*-rc*       : upload_appstore_prod    → Prod App Store Connect
+#   manual dispatch      : upload_appstore_prod    → Prod App Store Connect
+#   main push            : upload_appstore_prod    → Prod App Store Connect (hotfixes)
+#
+# Lane index (top to bottom):
+#   Section 1  — Private Helpers       (asc_api_key, get_scheme, get_bundle_id, get_config, validate_env_vars)
+#   Section 2  — Device Registration   (add_new_device, sync_devices)
+#   Section 3  — Certificates          (certs_dev, certs_appstore, certs_all, nuke_certs)
+#   Section 4  — Linting & Testing     (lint, test_unit, test_ui, test_all)
+#   Section 5  — Version Management    (bump_patch, bump_minor, bump_major)
+#   Section 6  — Build Number          (get_testflight_build_number, set_build_number, get_latest_testflight_build)
+#   Section 7  — Building              (build_dev, build_ipa_for_environment)
+#   Section 8  — TestFlight            (upload_testflight_stage)
+#   Section 9  — App Store             (upload_appstore_prod, submit_appstore_review)
+#   Section 10 — App Store Metadata    (screenshots, upload_screenshots, upload_metadata)
+#   Section 11 — Private Utilities     (send_slack_notification)
+#   Section 12 — Error Handler
+# =============================================================
+
 default_platform(:ios)
 
-PROJECT = "SwiftDeploy.xcodeproj"
+# =============================================================
+# Project Constants
+# =============================================================
+# Change these if you rename the project, schemes, or configs.
+APP_NAME        = "SwiftDeploy"
+PROJECT         = "#{APP_NAME}.xcodeproj"
+WORKSPACE       = "#{APP_NAME}.xcworkspace"
+SCHEME_DEV      = "#{APP_NAME}-Dev"
+SCHEME_QA       = "#{APP_NAME}-QA"
+SCHEME_PROD     = "#{APP_NAME}"
+CONFIG_DEV      = "Dev Debug"
+CONFIG_QA_REL   = "QA Release"
+CONFIG_PROD_REL = "Prod Release"
+DESTINATION_TEST = "platform=iOS Simulator,OS=latest,name=iPhone 16 Pro"
+OUTPUT_DIR      = "build"
+
+# Use workspace if CocoaPods exists, project otherwise
+USE_WORKSPACE   = File.exist?(WORKSPACE)
+
+# =============================================================
+# Bundle Identifiers
+# =============================================================
+# Hardcoded — bundle IDs are public (visible in App Store and
+# xcconfig files committed to repo). No need for env vars.
+# DEV   → local development only, never uploaded to Apple
+# QA    → TestFlight internal testing (QA team)
+# PROD  → App Store public release
+APP_ID_DEV      = "com.piyushsinroja.swiftdeploy.dev"
+APP_ID_QA       = "com.piyushsinroja.swiftdeploy.stage"
+APP_ID_PROD     = "com.piyushsinroja.swiftdeploy"
+
+# =============================================================
+# Apple Account
+# =============================================================
+APPLE_ID        = ENV["APPLE_ID"]
+TEAM_ID         = ENV["TEAM_ID"]
+ITC_TEAM_ID     = ENV["ITC_TEAM_ID"]
+
+# =============================================================
+# App Store Connect API Key
+# =============================================================
+# API key auth — no 2FA prompts on CI, never expires.
+# Create at: App Store Connect → Users → Integrations → API Keys
+ASC_KEY_ID      = ENV["ASC_KEY_ID"]
+ASC_ISSUER_ID   = ENV["ASC_ISSUER_ID"]
+ASC_KEY_CONTENT = ENV["ASC_KEY_CONTENT"]
+
+# =============================================================
+# Fastlane Match — Code Signing
+# =============================================================
+# Private GitHub repo storing encrypted certs and profiles.
+MATCH_GIT_URL   = ENV["MATCH_GIT_URL"]
+MATCH_PASSWORD  = ENV["MATCH_PASSWORD"]
+
+# =============================================================
+# TestFlight Beta Review Contact
+# =============================================================
+# Apple contacts these details if they have questions about the build.
+# First/last name hardcoded — not sensitive.
+# Email and phone from ENV — personal info kept out of repo.
+BETA_EMAIL      = ENV["BETA_CONTACT_EMAIL"]
+BETA_FIRST_NAME = "Piyush"
+BETA_LAST_NAME  = "Sinroja"
+BETA_PHONE      = ENV["BETA_CONTACT_PHONE"]
+
+# =============================================================
+# Notifications
+# =============================================================
+# Leave empty to disable Slack notifications entirely.
+SLACK_WEBHOOK   = ENV["SLACK_WEBHOOK_URL"]
 
 platform :ios do
 
+  # ─── Before All ─────────────────────────────────────────────
+  # setup_ci creates a temporary keychain on GitHub Actions
+  # required for code signing without a GUI session
   before_all do
     setup_ci if ENV["CI"]
   end
 
-  # ─── PR Checks ────────────────────────────────────────
+  # =============================================================
+  # SECTION 1 — Private Helpers
+  # Foundation lanes used by everything else.
+  # All private — not callable directly by developer or CI.
+  # =============================================================
+
+  # Creates App Store Connect API key object.
+  # Used by any lane that communicates with App Store Connect.
+  # API key auth = no 2FA prompts, more secure, never expires.
+  private_lane :asc_api_key do
+    app_store_connect_api_key(
+      key_id:                ASC_KEY_ID,
+      issuer_id:             ASC_ISSUER_ID,
+      key_content:           ASC_KEY_CONTENT,
+      # true = ASC_KEY_CONTENT is base64 encoded .p8 content
+      # Required when storing key in .env or GitHub Secrets
+      # to avoid newline corruption issues with multiline content
+      is_key_content_base64: true,
+      in_house:              false
+    )
+  end
+
+  # Returns Xcode scheme name for given environment.
+  # environment: "dev" | "qa" | "prod"
+  private_lane :get_scheme do |options|
+    case options[:environment]
+    when "dev"  then SCHEME_DEV
+    when "qa"   then SCHEME_QA
+    when "prod" then SCHEME_PROD
+    else
+      UI.user_error!("Unknown environment: #{options[:environment]}. Use dev, qa or prod.")
+    end
+  end
+
+  # Returns bundle ID constant for given environment.
+  private_lane :get_bundle_id do |options|
+    case options[:environment]
+    when "dev"  then APP_ID_DEV
+    when "qa"   then APP_ID_QA
+    when "prod" then APP_ID_PROD
+    else
+      UI.user_error!("Unknown environment: #{options[:environment]}. Use dev, qa or prod.")
+    end
+  end
+
+  # Returns Xcode build configuration name for given environment.
+  private_lane :get_config do |options|
+    case options[:environment]
+    when "dev"  then CONFIG_DEV
+    when "qa"   then CONFIG_QA_REL
+    when "prod" then CONFIG_PROD_REL
+    else
+      UI.user_error!("Unknown environment: #{options[:environment]}. Use dev, qa or prod.")
+    end
+  end
+
+  # Validates all required constants are set before running.
+  # Fails fast with a clear error instead of a cryptic failure
+  # deep inside a lane when a secret is missing.
+  # Called at the start of distribution and cert lanes.
+  # Uses a map instead of const_get — Fastlane DSL does not
+  # expose Ruby's const_get directly.
+  private_lane :validate_env_vars do |options|
+    required = options[:vars] || []
+
+    var_map = {
+      "APP_ID_DEV"      => APP_ID_DEV,
+      "APP_ID_QA"       => APP_ID_QA,
+      "APP_ID_PROD"     => APP_ID_PROD,
+      "APPLE_ID"        => APPLE_ID,
+      "TEAM_ID"         => TEAM_ID,
+      "ASC_KEY_ID"      => ASC_KEY_ID,
+      "ASC_ISSUER_ID"   => ASC_ISSUER_ID,
+      "ASC_KEY_CONTENT" => ASC_KEY_CONTENT,
+      "MATCH_GIT_URL"   => MATCH_GIT_URL,
+      "MATCH_PASSWORD"  => MATCH_PASSWORD
+    }
+
+    missing = required.select do |var|
+      value = var_map[var]
+      value.nil? || value.to_s.strip.empty?
+    end
+
+    unless missing.empty?
+      UI.user_error!("Missing required variables: #{missing.join(', ')}. Check your .env file or GitHub Secrets.")
+    end
+  end
+
+  # =============================================================
+  # SECTION 2 — Device Registration
+  # First thing a new developer or QA runs when joining project.
+  # Required before any Debug build can run on a physical device.
+  # =============================================================
+
+  # Register a new physical device in Apple Developer Portal.
+  # Refreshes development provisioning profiles for ALL bundle IDs
+  # so the new device can install Dev/Stage/Prod Debug builds.
+  # Run: bundle exec fastlane add_new_device
+  lane :add_new_device do
+    validate_env_vars(vars: %w[APP_ID_DEV APP_ID_QA APP_ID_PROD TEAM_ID])
+    api_key     = asc_api_key
+    device_name = prompt(text: "Device name (e.g. John iPhone 16): ")
+    device_udid = prompt(text: "Device UDID: ")
+
+    register_devices(
+      devices: { device_name => device_udid },
+      api_key: api_key
+    )
+
+    # All 3 bundle IDs need dev profiles refreshed —
+    # Dev/Stage/Prod Debug all use development signing on device
+    match(
+      type:                  "development",
+      app_identifier:        [APP_ID_DEV, APP_ID_QA, APP_ID_PROD],
+      api_key:               api_key,
+      readonly:              false,
+      force_for_new_devices: true
+    )
+
+    send_slack_notification(
+      message: ":iphone: New device registered: *#{device_name}*\nUDID: #{device_udid}"
+    )
+  end
+
+  # Refresh provisioning profiles when a device was registered
+  # manually on developer.apple.com (outside of Fastlane).
+  # Development profiles only — App Store profiles ignore UDIDs.
+  # Run: bundle exec fastlane sync_devices
+  lane :sync_devices do
+    validate_env_vars(vars: %w[APP_ID_DEV APP_ID_QA APP_ID_PROD])
+    api_key = asc_api_key
+    match(
+      type:                  "development",
+      app_identifier:        [APP_ID_DEV, APP_ID_QA, APP_ID_PROD],
+      api_key:               api_key,
+      readonly:              false,
+      force_for_new_devices: true
+    )
+  end
+
+  # =============================================================
+  # SECTION 3 — Certificates (Fastlane Match)
+  # Certs must exist before any build can be signed.
+  # All certs stored encrypted in private certs repo.
+  #
+  # readonly: true  → CI — never create, only download existing
+  # readonly: false → local — create new certs if missing
+  # =============================================================
+
+  # Sync Development certificates for ALL bundle IDs.
+  # All 3 need dev certs — Dev/Stage/Prod Debug schemes all
+  # run on physical devices using development signing.
+  # Accepts optional api_key to avoid creating a second key
+  # when called from within a lane that already has one.
+  # Run: bundle exec fastlane certs_dev
+  lane :certs_dev do |options|
+    validate_env_vars(vars: %w[APP_ID_DEV APP_ID_QA APP_ID_PROD])
+    api_key = options[:api_key] || asc_api_key
+    match(
+      type:           "development",
+      app_identifier: [APP_ID_DEV, APP_ID_QA, APP_ID_PROD],
+      api_key:        api_key,
+      readonly:       ENV["CI"] ? true : false,
+      force:          false
+    )
+  end
+
+  # Sync App Store certificates for QA and Prod bundle IDs.
+  # Dev excluded — dev builds never go to TestFlight or App Store.
+  # Accepts optional api_key to avoid creating a second key.
+  # Run: bundle exec fastlane certs_appstore
+  lane :certs_appstore do |options|
+    validate_env_vars(vars: %w[APP_ID_QA APP_ID_PROD])
+    api_key = options[:api_key] || asc_api_key
+    match(
+      type:           "appstore",
+      app_identifier: [APP_ID_QA, APP_ID_PROD],
+      api_key:        api_key,
+      readonly:       ENV["CI"] ? true : false,
+      force:          false
+    )
+  end
+
+  # Sync ALL certificates at once (development + appstore).
+  # Run this when setting up project on a new machine.
+  # bundle exec fastlane certs_all
+  lane :certs_all do
+    api_key = asc_api_key
+    certs_dev(api_key: api_key)
+    certs_appstore(api_key: api_key)
+  end
+
+  # Revoke and regenerate ALL certificates from scratch.
+  # ⚠️  DANGER — only when certs are corrupted or expired.
+  # This invalidates builds for ALL team members temporarily.
+  # NEVER run on CI. Run locally only.
+  # bundle exec fastlane nuke_certs
+  lane :nuke_certs do
+    UI.user_error!("Aborted.") unless UI.confirm("⚠️  This will revoke ALL certificates and affect all team members. Continue?")
+
+    api_key = asc_api_key
+    match_nuke(type: "development", api_key: api_key)
+    match_nuke(type: "appstore",    api_key: api_key)
+    certs_all
+  end
+
+  # =============================================================
+  # SECTION 4 — Linting and Testing
+  # Quality gates — run on every PR before merge.
+  # No code signing needed here.
+  # =============================================================
+
+  # SwiftLint static analysis.
+  # Strict mode — any violation fails the lane immediately.
+  # Requires .swiftlint.yml in project root.
+  # Run on PR: automatic. Run locally: bundle exec fastlane lint
   lane :lint do
     swiftlint(
-      mode: :lint,
-      strict: true,
-      raise_if_swiftlint_error: true
+      mode:                     :lint,
+      strict:                   true,
+      raise_if_swiftlint_error: true,
+      config_file:              ".swiftlint.yml"
     )
   end
 
-  lane :test do
+  # Unit tests only — fast, no full simulator boot required.
+  # Triggered on every PR to develop and main.
+  # Run: bundle exec fastlane test_unit
+  lane :test_unit do
     run_tests(
-      project: PROJECT,
-      scheme: "SwiftDeploy-Dev",
-      device: "iPhone 16",
-      code_coverage: true,
-      output_directory: "fastlane/test_output"
+      project:          USE_WORKSPACE ? nil     : PROJECT,
+      workspace:        USE_WORKSPACE ? WORKSPACE : nil,
+      scheme:           SCHEME_DEV,
+      destination:      DESTINATION_TEST,
+      code_coverage:    true,
+      output_directory: "fastlane/test_output",
+      output_files:     "unit_tests.xml",
+      only_testing:     ["SwiftDeployTests"]
     )
   end
 
-  # ─── QA → TestFlight ──────────────────────────────────
-  lane :beta do
-    sync_code_signing(
-      type: "appstore",
-      app_identifier: "com.yourname.swiftdeploy.stage",
-      readonly: true
+  # UI tests only — slower, requires full simulator boot.
+  # Runs in parallel with unit tests on CI.
+  # Run: bundle exec fastlane test_ui
+  lane :test_ui do
+    run_tests(
+      project:          USE_WORKSPACE ? nil      : PROJECT,
+      workspace:        USE_WORKSPACE ? WORKSPACE : nil,
+      scheme:           SCHEME_DEV,
+      destination:      DESTINATION_TEST,
+      output_directory: "fastlane/test_output",
+      output_files:     "ui_tests.xml",
+      only_testing:     ["SwiftDeployUITests"]
     )
+  end
+
+  # Run all tests locally in sequence before opening a PR.
+  # Run: bundle exec fastlane test_all
+  lane :test_all do
+    test_unit
+    test_ui
+  end
+
+  # =============================================================
+  # SECTION 5 — Version Management
+  # Marketing version (what users see in App Store: 1.0.0).
+  # Always run manually by release manager — never by CI.
+  # Run BEFORE cutting the release branch.
+  # =============================================================
+
+  # Bump patch version (1.0.0 → 1.0.1).
+  # Use for: hotfix releases, critical bug fixes.
+  # Auto-commits the change to project.pbxproj.
+  lane :bump_patch do
+    increment_version_number(bump_type: "patch", xcodeproj: PROJECT)
+    version = get_version_number(xcodeproj: PROJECT)
+    git_commit(path: ["#{PROJECT}/project.pbxproj"], message: "chore: bump version to #{version}")
+    UI.success("Version bumped to #{version}")
+  end
+
+  # Bump minor version (1.0.0 → 1.1.0).
+  # Use for: new feature releases.
+  lane :bump_minor do
+    increment_version_number(bump_type: "minor", xcodeproj: PROJECT)
+    version = get_version_number(xcodeproj: PROJECT)
+    git_commit(path: ["#{PROJECT}/project.pbxproj"], message: "chore: bump version to #{version}")
+    UI.success("Version bumped to #{version}")
+  end
+
+  # Bump major version (1.0.0 → 2.0.0).
+  # Use for: major redesigns, breaking changes.
+  lane :bump_major do
+    increment_version_number(bump_type: "major", xcodeproj: PROJECT)
+    version = get_version_number(xcodeproj: PROJECT)
+    git_commit(path: ["#{PROJECT}/project.pbxproj"], message: "chore: bump version to #{version}")
+    UI.success("Version bumped to #{version}")
+  end
+
+  # =============================================================
+  # SECTION 6 — Build Number Management
+  # Build number (what Apple sees internally: 42).
+  # TestFlight is always the source of truth.
+  # =============================================================
+
+  # Private — Fetch latest build number from TestFlight.
+  # Pure READ operation — does NOT modify anything.
+  # Reused by set_build_number and get_latest_testflight_build.
+  #
+  # Why TestFlight as source of truth:
+  # Prevents conflicts if builds are uploaded from multiple
+  # machines, manually via Xcode, or different CI systems.
+  # Apple always has the correct latest build number.
+  #
+  # initial_build_number: 0 → returns 0 on very first upload
+  # so set_build_number correctly sets build 1.
+  private_lane :get_testflight_build_number do |options|
+    api_key   = options[:api_key] || asc_api_key
+    bundle_id = options[:bundle_id]
+    version   = get_version_number(xcodeproj: PROJECT)
+
+    UI.user_error!("bundle_id is required") unless bundle_id
+
+    fetched_build = latest_testflight_build_number(
+      api_key:              api_key,
+      app_identifier:       bundle_id,
+      version:              version,
+      initial_build_number: 0
+    )
+
+    UI.message("TestFlight build for #{bundle_id}: #{fetched_build}")
+    fetched_build
+  end
+
+  # Private — Fetch latest TestFlight build, increment by 1,
+  # and set it in the Xcode project file.
+  # Called by upload_testflight_stage and upload_appstore_prod.
+  # Returns the new build number.
+  private_lane :set_build_number do |options|
+    bundle_id = options[:bundle_id]
+    api_key   = options[:api_key]
+    UI.user_error!("bundle_id is required") unless bundle_id
+
+    fetched_build = get_testflight_build_number(
+      bundle_id: bundle_id,
+      api_key:   api_key
+    )
+    new_build = fetched_build + 1
+
     increment_build_number(
-      build_number: ENV["GITHUB_RUN_NUMBER"],
-      xcodeproj: PROJECT
+      build_number: new_build,
+      xcodeproj:    PROJECT
     )
-    build_app(
-      project: PROJECT,
-      scheme: "SwiftDeploy-QA",
-      configuration: "QA Release",
-      output_directory: "build",
-      output_name: "SwiftDeploy-QA.ipa",
+
+    UI.success("Build number: #{fetched_build} → #{new_build}")
+    new_build
+  end
+
+  # Public — Check latest TestFlight build number without changing anything.
+  # Useful before a release to verify what Apple currently has.
+  #
+  # Usage:
+  #   bundle exec fastlane get_latest_testflight_build           → checks QA
+  #   bundle exec fastlane get_latest_testflight_build env:qa    → checks QA
+  #   bundle exec fastlane get_latest_testflight_build env:prod  → checks Prod
+  lane :get_latest_testflight_build do |options|
+    env       = options[:env] || "qa"
+    bundle_id = get_bundle_id(environment: env)
+    latest    = get_testflight_build_number(bundle_id: bundle_id)
+
+    UI.success("Latest TestFlight build for #{env.upcase} (#{bundle_id}): #{latest}")
+    latest
+  end
+
+  # =============================================================
+  # SECTION 7 — Building
+  # Compile and export IPA. Called by distribution lanes.
+  # =============================================================
+
+  # Build Dev Debug IPA and install directly on connected device.
+  # Does NOT upload anywhere — local physical device testing only.
+  # Run: bundle exec fastlane build_dev
+  lane :build_dev do
+    certs_dev
+    build_ipa_for_environment(environment: "dev")
+    install_on_device unless ENV["CI"]
+  end
+
+  # Private — Core build lane. Accepts environment and returns
+  # IPA and dSYM paths as a hash for use in upload lanes.
+  #
+  # clean: true           — prevents stale artifact issues
+  # include_symbols: true — generates dSYM for crash symbolication
+  # export_team_id        — prevents wrong team in multi-team accounts
+  # -parallelizeTargets   — builds multiple targets simultaneously
+  private_lane :build_ipa_for_environment do |options|
+    env            = options[:environment]
+    scheme         = get_scheme(environment:    env)
+    config         = get_config(environment:    env)
+    bundle_id      = get_bundle_id(environment: env)
+    is_dev         = env == "dev"
+    export_method  = is_dev ? "development" : "app-store"
+    profile_prefix = is_dev ? "match Development" : "match AppStore"
+
+    build_params = {
+      scheme:           scheme,
+      configuration:    config,
+      clean:            true,
+      include_symbols:  true,
+      export_method:    export_method,
+      export_team_id:   TEAM_ID,
+      output_directory: OUTPUT_DIR,
+      output_name:      "#{APP_NAME}-#{env.capitalize}.ipa",
+      xcargs:           "-parallelizeTargets",
       export_options: {
-        method: "app-store",
+        method:               export_method,
         provisioningProfiles: {
-          "com.yourname.swiftdeploy.stage" => "match AppStore com.yourname.swiftdeploy.stage"
+          bundle_id => "#{profile_prefix} #{bundle_id}"
         }
       }
-    )
+    }
+
+    # Use workspace if CocoaPods present, otherwise use project
+    if USE_WORKSPACE
+      build_params[:workspace] = WORKSPACE
+    else
+      build_params[:project] = PROJECT
+    end
+
+    build_app(build_params)
+
+    {
+      ipa_path:  lane_context[SharedValues::IPA_OUTPUT_PATH],
+      dsym_path: lane_context[SharedValues::DSYM_OUTPUT_PATH]
+    }
+  end
+
+  # =============================================================
+  # SECTION 8 — TestFlight Distribution
+  # Stage builds for QA team internal testing.
+  # =============================================================
+
+  # Build QA Release IPA and upload to Stage TestFlight.
+  # Triggered automatically by CI:
+  #   - push to develop  → continuous QA after each feature merge
+  #   - push to release/* → regression QA during release preparation
+  # Both use the same Stage TestFlight app.
+  # Run manually: bundle exec fastlane upload_testflight_stage
+  lane :upload_testflight_stage do
+    validate_env_vars(vars: %w[APP_ID_QA ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_CONTENT TEAM_ID])
+
+    api_key   = asc_api_key
+    changelog = changelog_from_git_commits(commits_count: 10, pretty: "- %s")
+
+    # Pass api_key to avoid creating a second instance inside certs_appstore
+    certs_appstore(api_key: api_key)
+    set_build_number(bundle_id: APP_ID_QA, api_key: api_key)
+    result = build_ipa_for_environment(environment: "qa")
+
     upload_to_testflight(
-      app_identifier: "com.yourname.swiftdeploy.stage",
+      api_key:                           api_key,
+      app_identifier:                    APP_ID_QA,
+      ipa:                               result[:ipa_path],
+      # Do not wait for Apple processing — build appears in
+      # TestFlight 5-30 min after upload when Apple finishes
       skip_waiting_for_build_processing: true,
-      changelog: changelog_from_git_commits(commits_count: 10)
+      # Auto-reject any build currently waiting for review.
+      # Prevents "build already waiting for review" errors.
+      reject_build_waiting_for_review:   true,
+      # Contact Apple uses if they have questions about the build.
+      # Required for first-time TestFlight submissions.
+      beta_app_review_info: {
+        contact_email:      BETA_EMAIL,
+        contact_first_name: BETA_FIRST_NAME,
+        contact_last_name:  BETA_LAST_NAME,
+        contact_phone:      BETA_PHONE
+      },
+      beta_app_description:    "#{APP_NAME} QA build for internal testing",
+      beta_app_feedback_email: BETA_EMAIL,
+      changelog:               changelog,
+      distribute_external:     false,
+      notify_external_testers: false
     )
-    slack(
-      message: ":rocket: QA build #{ENV['GITHUB_RUN_NUMBER']} uploaded to TestFlight",
-      slack_url: ENV["SLACK_WEBHOOK_URL"],
-      success: true
-    ) if ENV["SLACK_WEBHOOK_URL"]
+
+    version = get_version_number(xcodeproj: PROJECT)
+    build   = get_build_number(xcodeproj:   PROJECT)
+
+    send_slack_notification(
+      message: ":rocket: *QA Build #{version} (#{build})* → Stage TestFlight\nBranch: #{git_branch}\n#{changelog}"
+    )
   end
 
-  # ─── Production → App Store ───────────────────────────
-  lane :release do
-    sync_code_signing(
-      type: "appstore",
-      app_identifier: "com.yourname.swiftdeploy",
-      readonly: true
+  # =============================================================
+  # SECTION 9 — App Store Distribution
+  # Production builds for App Store release.
+  # =============================================================
+
+  # Build Prod Release IPA and upload to App Store Connect.
+  # Does NOT submit for review — QA must smoke test the prod
+  # build first, then release manager runs submit_appstore_review.
+  # Triggered by: tag v*.*.*-rc*, manual dispatch, or main push.
+  # Run manually: bundle exec fastlane upload_appstore_prod
+  lane :upload_appstore_prod do
+    validate_env_vars(vars: %w[APP_ID_PROD ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_CONTENT TEAM_ID])
+
+    api_key   = asc_api_key
+    changelog = changelog_from_git_commits(commits_count: 20, pretty: "- %s")
+
+    # Check clean state before build number changes project.pbxproj
+    ensure_git_status_clean
+
+    # Pass api_key to avoid creating a second instance inside certs_appstore
+    certs_appstore(api_key: api_key)
+    set_build_number(bundle_id: APP_ID_PROD, api_key: api_key)
+    result = build_ipa_for_environment(environment: "prod")
+
+    upload_to_app_store(
+      api_key:           api_key,
+      app_identifier:    APP_ID_PROD,
+      ipa:               result[:ipa_path],
+      skip_screenshots:  true,
+      skip_metadata:     true,
+      # Upload only — manual submission after QA smoke test
+      submit_for_review: false,
+      force:             true
     )
-    increment_build_number(
-      build_number: ENV["GITHUB_RUN_NUMBER"],
-      xcodeproj: PROJECT
+
+    version = get_version_number(xcodeproj: PROJECT)
+    build   = get_build_number(xcodeproj:   PROJECT)
+
+    send_slack_notification(
+      message: ":tada: *Prod Build #{version} (#{build})* → App Store Connect\nAwaiting QA smoke test. Run submit_appstore_review when approved.\n#{changelog}"
     )
-    build_app(
-      project: PROJECT,
-      scheme: "SwiftDeploy",
-      configuration: "Prod Release",
-      output_directory: "build",
-      output_name: "SwiftDeploy.ipa",
-      export_options: {
-        method: "app-store",
-        provisioningProfiles: {
-          "com.yourname.swiftdeploy" => "match AppStore com.yourname.swiftdeploy"
-        }
+  end
+
+  # Submit the existing prod build for Apple review.
+  # ALWAYS run manually — never triggered by CI.
+  # Submits the build already in App Store Connect from
+  # upload_appstore_prod. Does NOT upload a new binary.
+  # Run: bundle exec fastlane submit_appstore_review
+  lane :submit_appstore_review do
+    validate_env_vars(vars: %w[APP_ID_PROD ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_CONTENT])
+
+    api_key = asc_api_key
+    deliver(
+      api_key:            api_key,
+      app_identifier:     APP_ID_PROD,
+      submit_for_review:  true,
+      # Manually release after Apple approves — not auto-release
+      automatic_release:  false,
+      force:              true,
+      skip_binary_upload: true,
+      skip_screenshots:   true,
+      skip_metadata:      false,
+      # Answers to Apple compliance questions.
+      # Update if your app uses encryption or third-party content.
+      submission_information: {
+        add_id_info_uses_idfa:                       false,
+        add_id_info_serves_ads:                      false,
+        add_id_info_tracks_action:                   false,
+        add_id_info_tracks_install:                  false,
+        add_id_info_limits_tracking:                 false,
+        export_compliance_uses_encryption:           false,
+        export_compliance_is_exempt:                 false,
+        content_rights_has_rights:                   true,
+        content_rights_contains_third_party_content: false
       }
     )
-    upload_to_app_store(
-      app_identifier: "com.yourname.swiftdeploy",
-      skip_screenshots: true,
-      skip_metadata: false,
-      submit_for_review: false,
-      force: true
+
+    send_slack_notification(
+      message: ":apple: *#{APP_NAME}* submitted for App Store review!"
     )
-    slack(
-      message: ":tada: Prod build #{ENV['GITHUB_RUN_NUMBER']} submitted to App Store",
-      slack_url: ENV["SLACK_WEBHOOK_URL"],
-      success: true
-    ) if ENV["SLACK_WEBHOOK_URL"]
   end
 
-  # ─── Error handler ────────────────────────────────────
-  error do |lane, exception|
+  # =============================================================
+  # SECTION 10 — App Store Metadata and Screenshots
+  # Supporting content for App Store listing.
+  # =============================================================
+
+  # Generate App Store screenshots for all device sizes.
+  # Requires: fastlane snapshot init to set up Snapfile first.
+  # Run: bundle exec fastlane screenshots
+  lane :screenshots do
+    capture_screenshots(
+      project:                    USE_WORKSPACE ? nil      : PROJECT,
+      workspace:                  USE_WORKSPACE ? WORKSPACE : nil,
+      scheme:                     SCHEME_PROD,
+      clear_previous_screenshots: true
+    )
+    frame_screenshots(white: true)
+  end
+
+  # Upload generated screenshots to App Store Connect.
+  # Run after: bundle exec fastlane screenshots
+  # Run: bundle exec fastlane upload_screenshots
+  lane :upload_screenshots do
+    api_key = asc_api_key
+    upload_to_app_store(
+      api_key:            api_key,
+      app_identifier:     APP_ID_PROD,
+      skip_binary_upload: true,
+      skip_metadata:      true,
+      skip_screenshots:   false,
+      force:              true
+    )
+  end
+
+  # Upload app metadata only (description, keywords, what's new).
+  # Does not touch binary or screenshots.
+  # Run: bundle exec fastlane upload_metadata
+  lane :upload_metadata do
+    api_key = asc_api_key
+    upload_to_app_store(
+      api_key:            api_key,
+      app_identifier:     APP_ID_PROD,
+      skip_binary_upload: true,
+      skip_screenshots:   true,
+      skip_metadata:      false,
+      force:              true
+    )
+  end
+
+  # =============================================================
+  # SECTION 11 — Private Utilities
+  # Internal helpers used across all sections above.
+  # =============================================================
+
+  # Slack notification helper.
+  # Silently skips if SLACK_WEBHOOK is not configured.
+  # Slack is fully optional — no crash if not set up.
+  private_lane :send_slack_notification do |options|
+    next if SLACK_WEBHOOK.nil? || SLACK_WEBHOOK.to_s.strip.empty?
+
     slack(
-      message: ":x: #{lane} failed: #{exception.message}",
-      slack_url: ENV["SLACK_WEBHOOK_URL"],
+      message:          options[:message],
+      slack_url:        SLACK_WEBHOOK,
+      success:          options.fetch(:success, true),
+      default_payloads: [],
+      payload: {
+        "Branch" => git_branch,
+        "Commit" => last_git_commit[:abbreviated_commit_hash],
+        "Author" => last_git_commit[:author]
+      }
+    )
+  end
+
+  # =============================================================
+  # SECTION 12 — Error Handler
+  # Runs automatically when ANY lane fails.
+  # Always last — catches errors from all sections above.
+  # =============================================================
+
+  error do |lane, exception|
+    send_slack_notification(
+      message: ":x: *#{lane}* failed on *#{git_branch}*\nError: #{exception.message}",
       success: false
-    ) if ENV["SLACK_WEBHOOK_URL"]
+    )
   end
 
 end

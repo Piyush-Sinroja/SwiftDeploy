@@ -1,11 +1,28 @@
-git_url("https://github.com/yourname/swiftdeploy-certs")
+# Matchfile
+# Configuration for Fastlane Match (code signing manager).
+# Match stores all certificates and provisioning profiles
+# encrypted in a private Git repository.
+# All values read from environment variables.
+
+# Private GitHub repo that stores encrypted certificates
+git_url(ENV["MATCH_GIT_URL"])
+
+# Storage mode - git is most common for teams
 storage_mode("git")
 
+# All bundle IDs that need certificates managed by Match
 app_identifier([
-  "com.yourname.swiftdeploy",
-  "com.yourname.swiftdeploy.stage",
-  "com.yourname.swiftdeploy.dev"
+  ENV["APP_IDENTIFIER_PROD"],
+  ENV["APP_IDENTIFIER_QA"],
+  ENV["APP_IDENTIFIER_DEV"]
 ])
 
-team_id("YOUR10DIGITTEAMID")
-username("your@apple.id")
+# Apple Developer Team ID
+team_id(ENV["TEAM_ID"])
+
+# Apple ID - used for non-API key authentication fallback
+username(ENV["APPLE_ID"])
+
+# Never create new certs on CI - only read existing ones
+# Set to false locally when you need to generate new certs
+readonly(true) if ENV["CI"]

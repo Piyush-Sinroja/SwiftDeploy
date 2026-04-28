@@ -9,6 +9,6 @@
 // https://developer.apple.com/documentation/xcode/adding-a-build-configuration-file-to-your-project
 #include "Base.xcconfig"
 
-APP_BUNDLE_ID = com.yourname.swiftdeploy.dev
+APP_BUNDLE_ID = com.piyushsinroja.swiftdeploy.dev
 APP_NAME = SwiftDeploy Dev
 API_BASE_URL = https:$()/$()/dev-api.yourserver.com
