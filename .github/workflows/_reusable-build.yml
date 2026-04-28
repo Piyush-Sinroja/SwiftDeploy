@@ -42,6 +42,10 @@ on:
         required: false
         type: boolean
         default: false
+    # Variables (non-sensitive) accessed via vars.* directly
+    # Add these in GitHub → Settings → Secrets and Variables → Variables:
+    #   APP_IDENTIFIER_PROD, APP_IDENTIFIER_QA, APP_IDENTIFIER_DEV
+    #   BETA_CONTACT_FIRST_NAME, BETA_CONTACT_LAST_NAME
     secrets:
       APPLE_ID:
         required: true
@@ -49,12 +53,6 @@ on:
         required: true
       ITC_TEAM_ID:
         required: false
-      APP_IDENTIFIER_PROD:
-        required: true
-      APP_IDENTIFIER_QA:
-        required: true
-      APP_IDENTIFIER_DEV:
-        required: true
       ASC_KEY_ID:
         required: true
       ASC_ISSUER_ID:
@@ -70,10 +68,6 @@ on:
       SLACK_WEBHOOK_URL:
         required: false
       BETA_CONTACT_EMAIL:
-        required: false
-      BETA_CONTACT_FIRST_NAME:
-        required: false
-      BETA_CONTACT_LAST_NAME:
         required: false
       BETA_CONTACT_PHONE:
         required: false
@@ -183,12 +177,10 @@ jobs:
       - name: Run Fastlane ${{ inputs.lane }}
         run: bundle exec fastlane ${{ inputs.lane }}
         env:
+          # ── Secrets (sensitive) ──────────────────────────────
           APPLE_ID:                      ${{ secrets.APPLE_ID }}
           TEAM_ID:                       ${{ secrets.TEAM_ID }}
           ITC_TEAM_ID:                   ${{ secrets.ITC_TEAM_ID }}
-          APP_IDENTIFIER_PROD:           ${{ secrets.APP_IDENTIFIER_PROD }}
-          APP_IDENTIFIER_QA:             ${{ secrets.APP_IDENTIFIER_QA }}
-          APP_IDENTIFIER_DEV:            ${{ secrets.APP_IDENTIFIER_DEV }}
           ASC_KEY_ID:                    ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID:                 ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_CONTENT:               ${{ secrets.ASC_KEY_CONTENT }}
@@ -197,9 +189,13 @@ jobs:
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
           SLACK_WEBHOOK_URL:             ${{ secrets.SLACK_WEBHOOK_URL }}
           BETA_CONTACT_EMAIL:            ${{ secrets.BETA_CONTACT_EMAIL }}
-          BETA_CONTACT_FIRST_NAME:       ${{ secrets.BETA_CONTACT_FIRST_NAME }}
-          BETA_CONTACT_LAST_NAME:        ${{ secrets.BETA_CONTACT_LAST_NAME }}
           BETA_CONTACT_PHONE:            ${{ secrets.BETA_CONTACT_PHONE }}
+          # ── Variables (non-sensitive, set in GitHub Variables) ─
+          APP_IDENTIFIER_PROD:           ${{ vars.APP_IDENTIFIER_PROD }}
+          APP_IDENTIFIER_QA:             ${{ vars.APP_IDENTIFIER_QA }}
+          APP_IDENTIFIER_DEV:            ${{ vars.APP_IDENTIFIER_DEV }}
+          BETA_CONTACT_FIRST_NAME:       ${{ vars.BETA_CONTACT_FIRST_NAME }}
+          BETA_CONTACT_LAST_NAME:        ${{ vars.BETA_CONTACT_LAST_NAME }}
           CI:                            true
 
       # ==========================================================

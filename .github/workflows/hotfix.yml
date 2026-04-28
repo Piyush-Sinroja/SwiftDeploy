@@ -48,9 +48,6 @@ jobs:
       APPLE_ID:                      ${{ secrets.APPLE_ID }}
       TEAM_ID:                       ${{ secrets.TEAM_ID }}
       ITC_TEAM_ID:                   ${{ secrets.ITC_TEAM_ID }}
-      APP_IDENTIFIER_PROD:           ${{ secrets.APP_IDENTIFIER_PROD }}
-      APP_IDENTIFIER_QA:             ${{ secrets.APP_IDENTIFIER_QA }}
-      APP_IDENTIFIER_DEV:            ${{ secrets.APP_IDENTIFIER_DEV }}
       ASC_KEY_ID:                    ${{ secrets.ASC_KEY_ID }}
       ASC_ISSUER_ID:                 ${{ secrets.ASC_ISSUER_ID }}
       ASC_KEY_CONTENT:               ${{ secrets.ASC_KEY_CONTENT }}
@@ -59,6 +56,4 @@ jobs:
       MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
       SLACK_WEBHOOK_URL:             ${{ secrets.SLACK_WEBHOOK_URL }}
       BETA_CONTACT_EMAIL:            ${{ secrets.BETA_CONTACT_EMAIL }}
-      BETA_CONTACT_FIRST_NAME:       ${{ secrets.BETA_CONTACT_FIRST_NAME }}
-      BETA_CONTACT_LAST_NAME:        ${{ secrets.BETA_CONTACT_LAST_NAME }}
       BETA_CONTACT_PHONE:            ${{ secrets.BETA_CONTACT_PHONE }}

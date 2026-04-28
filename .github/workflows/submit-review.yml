@@ -76,9 +76,6 @@ jobs:
       APPLE_ID:                      ${{ secrets.APPLE_ID }}
       TEAM_ID:                       ${{ secrets.TEAM_ID }}
       ITC_TEAM_ID:                   ${{ secrets.ITC_TEAM_ID }}
-      APP_IDENTIFIER_PROD:           ${{ secrets.APP_IDENTIFIER_PROD }}
-      APP_IDENTIFIER_QA:             ${{ secrets.APP_IDENTIFIER_QA }}
-      APP_IDENTIFIER_DEV:            ${{ secrets.APP_IDENTIFIER_DEV }}
       ASC_KEY_ID:                    ${{ secrets.ASC_KEY_ID }}
       ASC_ISSUER_ID:                 ${{ secrets.ASC_ISSUER_ID }}
       ASC_KEY_CONTENT:               ${{ secrets.ASC_KEY_CONTENT }}
