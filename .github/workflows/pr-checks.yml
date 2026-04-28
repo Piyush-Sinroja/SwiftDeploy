@@ -1,10 +1,16 @@
 # =============================================================
 # PR Checks Workflow
 # =============================================================
-# Triggers on every PR to dev or main.
+# Triggers on every PR to dev, main, or release/*.
 # Jobs run in this order:
 #   lint (fast fail)
 #   unit-tests + ui-tests (parallel after lint)
+#
+# Branch strategy:
+#   feature/* → dev
+#   dev       → release/*
+#   release/* → main
+#   hotfix/*  → main (then back-merge to dev)
 #
 # CACHE BUSTING:
 #   Add ?clear_cache=true to workflow_dispatch trigger
@@ -25,6 +31,7 @@ on:
     branches:
       - dev
       - main
+      - release/**
     types: [opened, synchronize, reopened]
 
   # Allow manual trigger with cache control
