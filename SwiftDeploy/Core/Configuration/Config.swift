@@ -1,5 +1,4 @@
 import Foundation
-
 enum Config {
     static let apiBaseURL: String = {
         guard let url = Bundle.main.infoDictionary?["API_BASE_URL"] as? String,
