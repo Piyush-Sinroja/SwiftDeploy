@@ -28,6 +28,6 @@ final class SwiftDeployUITests: XCTestCase {
 
     @MainActor
     func testHomeScreenExists() {
-        XCTAssertFalse(app?.windows.isEmpty ?? true, "App should have at least one window")
+        XCTAssertTrue(app?.windows.firstMatch.exists ?? false, "App should have at least one window")
     }
 }
