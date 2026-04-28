@@ -34,6 +34,7 @@
 		1CC4AB642F9E33F500CD4306 /* SwiftDeploy Dev.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "SwiftDeploy Dev.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		1CC4AB712F9E33F700CD4306 /* SwiftDeployTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SwiftDeployTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		1CC4AB7B2F9E33F700CD4306 /* SwiftDeployUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SwiftDeployUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		1CD0A3662FA0DD8A00F90536 /* SwiftDeploy-Dev.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = "SwiftDeploy-Dev.xctestplan"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -99,6 +100,7 @@
 		1CC4AB5B2F9E33F500CD4306 = {
 			isa = PBXGroup;
 			children = (
+				1CD0A3662FA0DD8A00F90536 /* SwiftDeploy-Dev.xctestplan */,
 				1CC4AB662F9E33F500CD4306 /* SwiftDeploy */,
 				1CC4AB742F9E33F700CD4306 /* SwiftDeployTests */,
 				1CC4AB7E2F9E33F700CD4306 /* SwiftDeployUITests */,
