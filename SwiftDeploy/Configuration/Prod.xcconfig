@@ -12,3 +12,4 @@
 APP_BUNDLE_ID = com.piyushsinroja.swiftdeploy
 APP_NAME = SwiftDeploy
 API_BASE_URL = https:$()/$()/api.yourserver.com
+ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon
