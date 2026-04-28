@@ -10,6 +10,6 @@
 
 #include "Base.xcconfig"
 
-APP_BUNDLE_ID = com.yourname.swiftdeploy.stage
+APP_BUNDLE_ID = com.piyushsinroja.swiftdeploy.stage
 APP_NAME = SwiftDeploy QA
 API_BASE_URL = https:$()/$()/stage-api.yourserver.com
