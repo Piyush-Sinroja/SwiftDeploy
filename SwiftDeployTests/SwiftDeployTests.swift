@@ -7,9 +7,7 @@
 import XCTest
 
 final class SwiftDeployTests: XCTestCase {
-
     // MARK: - Config Tests
-
     func testAPIBaseURLNotEmpty() {
         // API_BASE_URL must be set in Info.plist via xcconfig
         // If empty, the app would crash on launch in Config.swift
