@@ -43,7 +43,7 @@ SCHEME_PROD     = "#{APP_NAME}"
 CONFIG_DEV      = "Dev Debug"
 CONFIG_QA_REL   = "QA Release"
 CONFIG_PROD_REL = "Prod Release"
-DEVICE_TEST     = "iPhone 16"
+DESTINATION_TEST = "platform=iOS Simulator,OS=latest,name=iPhone 16 Pro"
 OUTPUT_DIR      = "build"
 
 # Use workspace if CocoaPods exists, project otherwise
@@ -343,7 +343,7 @@ platform :ios do
       project:          USE_WORKSPACE ? nil     : PROJECT,
       workspace:        USE_WORKSPACE ? WORKSPACE : nil,
       scheme:           SCHEME_DEV,
-      device:           DEVICE_TEST,
+      destination:      DESTINATION_TEST,
       code_coverage:    true,
       output_directory: "fastlane/test_output",
       output_files:     "unit_tests.xml",
@@ -359,7 +359,7 @@ platform :ios do
       project:          USE_WORKSPACE ? nil      : PROJECT,
       workspace:        USE_WORKSPACE ? WORKSPACE : nil,
       scheme:           SCHEME_DEV,
-      device:           DEVICE_TEST,
+      destination:      DESTINATION_TEST,
       output_directory: "fastlane/test_output",
       output_files:     "ui_tests.xml",
       only_testing:     ["SwiftDeployUITests"]
