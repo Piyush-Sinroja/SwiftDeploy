@@ -397,7 +397,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID";
-				PRODUCT_NAME = "$(APP_NAME)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "match Development com.piyushsinroja.swiftdeploy.dev";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -429,7 +429,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/$(APP_NAME).app/$(APP_NAME)";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SwiftDeploy.app/SwiftDeploy";
 			};
 			name = "Dev Debug";
 		};
@@ -538,7 +538,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID";
-				PRODUCT_NAME = "$(APP_NAME)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "match Development com.piyushsinroja.swiftdeploy.dev";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -570,7 +570,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/$(APP_NAME).app/$(APP_NAME)";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SwiftDeploy.app/SwiftDeploy";
 			};
 			name = "Dev Release";
 		};
@@ -686,7 +686,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID";
-				PRODUCT_NAME = "$(APP_NAME)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "match Development com.piyushsinroja.swiftdeploy.stage";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -718,7 +718,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/$(APP_NAME).app/$(APP_NAME)";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SwiftDeploy.app/SwiftDeploy";
 			};
 			name = "QA Debug";
 		};
@@ -834,7 +834,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID";
-				PRODUCT_NAME = "$(APP_NAME)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "match Development com.piyushsinroja.swiftdeploy";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -866,7 +866,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/$(APP_NAME).app/$(APP_NAME)";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SwiftDeploy.app/SwiftDeploy";
 			};
 			name = "Prod Debug";
 		};
@@ -975,7 +975,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID";
-				PRODUCT_NAME = "$(APP_NAME)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "match AppStore com.piyushsinroja.swiftdeploy.stage";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -1007,7 +1007,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/$(APP_NAME).app/$(APP_NAME)";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SwiftDeploy.app/SwiftDeploy";
 			};
 			name = "QA Release";
 		};
@@ -1116,7 +1116,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID";
-				PRODUCT_NAME = "$(APP_NAME)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "match AppStore com.piyushsinroja.swiftdeploy";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -1147,7 +1147,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/$(APP_NAME).app/$(APP_NAME)";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SwiftDeploy.app/SwiftDeploy";
 			};
 			name = "Prod Release";
 		};
