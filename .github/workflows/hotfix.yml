@@ -1,18 +1,19 @@
 # =============================================================
 # Hotfix Workflow — Live App Emergency Fix
 # =============================================================
-# Triggers on push to main (after hotfix/* PR is merged).
-# main only receives direct pushes for hotfixes.
-# Regular releases merge to main AFTER App Store approval
-# via the release-prod.yml workflow (not this one).
+# MANUAL ONLY — never auto-triggers.
+# Tech lead manually triggers after hotfix/* is merged to main.
 #
 # Hotfix flow:
 #   1. Bug found in live App Store app
-#   2. git checkout -b hotfix/1.1.1 from main
-#   3. Fix + bump_patch (1.1.0 → 1.1.1)
-#   4. PR: hotfix/1.1.1 → main
-#   5. Merge → this workflow triggers → prod build uploaded
-#   6. QA smoke tests → submit_for_review → Apple review
+#   2. git checkout -b hotfix/1.0.1 from main
+#   3. Fix + bump version (1.0.0 → 1.0.1)
+#   4. PR: hotfix/1.0.1 → main (pr-checks run)
+#   5. Merge to main
+#   6. Tech lead manually triggers this workflow
+#   7. QA smoke tests on TestFlight
+#   8. Submit to App Store Connect
+#   9. Back-merge hotfix → dev
 #
 # DEBUGGING:
 #   build-logs-release-*  → compile/signing errors
@@ -22,13 +23,13 @@
 name: Hotfix — Prod App Store Connect
 
 on:
-  push:
-    branches:
-      - main
-
-  # Manual trigger with cache control
+  # Manual only — tech lead triggers after hotfix merged to main
   workflow_dispatch:
     inputs:
+      reason:
+        description: 'Reason for hotfix build (e.g. login crash fix)'
+        required: true
+        type: string
       clear_cache:
         description: 'Skip all caches for a clean build'
         type: boolean
