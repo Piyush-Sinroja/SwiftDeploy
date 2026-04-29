@@ -76,3 +76,7 @@ fastlane/Preview.html
 # Match certificates downloaded locally
 certs/
 profiles/
+
+# Bundler
+.bundle/
+vendor/bundle
