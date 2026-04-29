@@ -6,6 +6,13 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		1CC4AC202F9FC14B00CD4306 /* Alamofire in Frameworks */ = {isa = PBXBuildFile; productRef = 1CC4AC1F2F9FC14B00CD4306 /* Alamofire */; };
+		1CC4AC232F9FC16800CD4306 /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = 1CC4AC222F9FC16800CD4306 /* Kingfisher */; };
+		1CC4AC262F9FC19E00CD4306 /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = 1CC4AC252F9FC19E00CD4306 /* Lottie */; };
+		1CC4AC292F9FC1B500CD4306 /* SwiftyBeaver in Frameworks */ = {isa = PBXBuildFile; productRef = 1CC4AC282F9FC1B500CD4306 /* SwiftyBeaver */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		1CC4AB722F9E33F700CD4306 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -24,9 +31,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		1CC4AB642F9E33F500CD4306 /* SwiftDeploy Dev.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "SwiftDeploy Dev.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		1CC4AB642F9E33F500CD4306 /* SwiftDeploy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SwiftDeploy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1CC4AB712F9E33F700CD4306 /* SwiftDeployTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SwiftDeployTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		1CC4AB7B2F9E33F700CD4306 /* SwiftDeployUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SwiftDeployUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		1CD0A3662FA0DD8A00F90536 /* SwiftDeploy-Dev.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = "SwiftDeploy-Dev.xctestplan"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -65,6 +73,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1CC4AC232F9FC16800CD4306 /* Kingfisher in Frameworks */,
+				1CC4AC202F9FC14B00CD4306 /* Alamofire in Frameworks */,
+				1CC4AC262F9FC19E00CD4306 /* Lottie in Frameworks */,
+				1CC4AC292F9FC1B500CD4306 /* SwiftyBeaver in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -88,6 +100,7 @@
 		1CC4AB5B2F9E33F500CD4306 = {
 			isa = PBXGroup;
 			children = (
+				1CD0A3662FA0DD8A00F90536 /* SwiftDeploy-Dev.xctestplan */,
 				1CC4AB662F9E33F500CD4306 /* SwiftDeploy */,
 				1CC4AB742F9E33F700CD4306 /* SwiftDeployTests */,
 				1CC4AB7E2F9E33F700CD4306 /* SwiftDeployUITests */,
@@ -98,7 +111,7 @@
 		1CC4AB652F9E33F500CD4306 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				1CC4AB642F9E33F500CD4306 /* SwiftDeploy Dev.app */,
+				1CC4AB642F9E33F500CD4306 /* SwiftDeploy.app */,
 				1CC4AB712F9E33F700CD4306 /* SwiftDeployTests.xctest */,
 				1CC4AB7B2F9E33F700CD4306 /* SwiftDeployUITests.xctest */,
 			);
@@ -125,9 +138,13 @@
 			);
 			name = SwiftDeploy;
 			packageProductDependencies = (
+				1CC4AC1F2F9FC14B00CD4306 /* Alamofire */,
+				1CC4AC222F9FC16800CD4306 /* Kingfisher */,
+				1CC4AC252F9FC19E00CD4306 /* Lottie */,
+				1CC4AC282F9FC1B500CD4306 /* SwiftyBeaver */,
 			);
 			productName = SwiftDeploy;
-			productReference = 1CC4AB642F9E33F500CD4306 /* SwiftDeploy Dev.app */;
+			productReference = 1CC4AB642F9E33F500CD4306 /* SwiftDeploy.app */;
 			productType = "com.apple.product-type.application";
 		};
 		1CC4AB702F9E33F700CD4306 /* SwiftDeployTests */ = {
@@ -208,6 +225,12 @@
 			);
 			mainGroup = 1CC4AB5B2F9E33F500CD4306;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				1CC4AC1E2F9FC14B00CD4306 /* XCRemoteSwiftPackageReference "Alamofire" */,
+				1CC4AC212F9FC16800CD4306 /* XCRemoteSwiftPackageReference "Kingfisher" */,
+				1CC4AC242F9FC19E00CD4306 /* XCRemoteSwiftPackageReference "lottie-ios" */,
+				1CC4AC272F9FC1B500CD4306 /* XCRemoteSwiftPackageReference "SwiftyBeaver" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 1CC4AB652F9E33F500CD4306 /* Products */;
 			projectDirPath = "";
@@ -288,6 +311,7 @@
 			baseConfigurationReferenceRelativePath = Configuration/Dev.xcconfig;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon-Dev";
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
@@ -353,9 +377,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon-Dev";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_STYLE = Automatic;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = F56FC8LMJX;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = F56FC8LMJX;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SwiftDeploy/Info.plist;
@@ -372,7 +398,9 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID";
-				PRODUCT_NAME = "$(APP_NAME)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "match Development com.piyushsinroja.swiftdeploy.dev";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG INTERNAL";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -402,7 +430,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SwiftDeploy.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SwiftDeploy";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SwiftDeploy.app/SwiftDeploy";
 			};
 			name = "Dev Debug";
 		};
@@ -432,6 +460,7 @@
 			baseConfigurationReferenceRelativePath = Configuration/Dev.xcconfig;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon-Dev";
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
@@ -490,9 +519,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon-Dev";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_STYLE = Automatic;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = F56FC8LMJX;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = F56FC8LMJX;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SwiftDeploy/Info.plist;
@@ -509,7 +540,9 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID";
-				PRODUCT_NAME = "$(APP_NAME)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "match Development com.piyushsinroja.swiftdeploy.dev";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = INTERNAL;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -539,7 +572,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SwiftDeploy.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SwiftDeploy";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SwiftDeploy.app/SwiftDeploy";
 			};
 			name = "Dev Release";
 		};
@@ -634,9 +667,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon-QA";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_STYLE = Automatic;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = F56FC8LMJX;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = F56FC8LMJX;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SwiftDeploy/Info.plist;
@@ -653,7 +688,9 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID";
-				PRODUCT_NAME = "$(APP_NAME)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "match Development com.piyushsinroja.swiftdeploy.stage";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG INTERNAL";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -683,7 +720,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SwiftDeploy.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SwiftDeploy";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SwiftDeploy.app/SwiftDeploy";
 			};
 			name = "QA Debug";
 		};
@@ -778,9 +815,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_STYLE = Automatic;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = F56FC8LMJX;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = F56FC8LMJX;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SwiftDeploy/Info.plist;
@@ -797,7 +836,9 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID";
-				PRODUCT_NAME = "$(APP_NAME)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "match Development com.piyushsinroja.swiftdeploy";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -827,7 +868,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SwiftDeploy.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SwiftDeploy";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SwiftDeploy.app/SwiftDeploy";
 			};
 			name = "Prod Debug";
 		};
@@ -915,9 +956,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = "AppIcon-QA";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_STYLE = Automatic;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = F56FC8LMJX;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = F56FC8LMJX;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SwiftDeploy/Info.plist;
@@ -934,7 +977,9 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID";
-				PRODUCT_NAME = "$(APP_NAME)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "match AppStore com.piyushsinroja.swiftdeploy.stage";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = INTERNAL;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -964,7 +1009,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SwiftDeploy.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SwiftDeploy";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SwiftDeploy.app/SwiftDeploy";
 			};
 			name = "QA Release";
 		};
@@ -1052,9 +1097,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_STYLE = Automatic;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = F56FC8LMJX;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = F56FC8LMJX;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SwiftDeploy/Info.plist;
@@ -1071,7 +1118,9 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID";
-				PRODUCT_NAME = "$(APP_NAME)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "match AppStore com.piyushsinroja.swiftdeploy";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -1100,7 +1149,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SwiftDeploy.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SwiftDeploy";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SwiftDeploy.app/SwiftDeploy";
 			};
 			name = "Prod Release";
 		};
@@ -1180,6 +1229,64 @@
 			defaultConfigurationName = "Dev Debug";
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		1CC4AC1E2F9FC14B00CD4306 /* XCRemoteSwiftPackageReference "Alamofire" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Alamofire/Alamofire";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.11.2;
+			};
+		};
+		1CC4AC212F9FC16800CD4306 /* XCRemoteSwiftPackageReference "Kingfisher" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/onevcat/Kingfisher";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.8.1;
+			};
+		};
+		1CC4AC242F9FC19E00CD4306 /* XCRemoteSwiftPackageReference "lottie-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/airbnb/lottie-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.6.0;
+			};
+		};
+		1CC4AC272F9FC1B500CD4306 /* XCRemoteSwiftPackageReference "SwiftyBeaver" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SwiftyBeaver/SwiftyBeaver";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.1.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		1CC4AC1F2F9FC14B00CD4306 /* Alamofire */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1CC4AC1E2F9FC14B00CD4306 /* XCRemoteSwiftPackageReference "Alamofire" */;
+			productName = Alamofire;
+		};
+		1CC4AC222F9FC16800CD4306 /* Kingfisher */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1CC4AC212F9FC16800CD4306 /* XCRemoteSwiftPackageReference "Kingfisher" */;
+			productName = Kingfisher;
+		};
+		1CC4AC252F9FC19E00CD4306 /* Lottie */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1CC4AC242F9FC19E00CD4306 /* XCRemoteSwiftPackageReference "lottie-ios" */;
+			productName = Lottie;
+		};
+		1CC4AC282F9FC1B500CD4306 /* SwiftyBeaver */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1CC4AC272F9FC1B500CD4306 /* XCRemoteSwiftPackageReference "SwiftyBeaver" */;
+			productName = SwiftyBeaver;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 1CC4AB5C2F9E33F500CD4306 /* Project object */;
 }

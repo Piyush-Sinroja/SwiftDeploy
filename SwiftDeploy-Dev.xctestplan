@@ -1,0 +1,37 @@
+{
+  "configurations" : [
+    {
+      "id" : "C23AC16E-5303-43E8-B47E-601E47FE595A",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "codeCoverage" : false,
+    "performanceAntipatternCheckerEnabled" : true,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:SwiftDeploy.xcodeproj",
+      "identifier" : "1CC4AB632F9E33F500CD4306",
+      "name" : "SwiftDeploy"
+    }
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:SwiftDeploy.xcodeproj",
+        "identifier" : "1CC4AB702F9E33F700CD4306",
+        "name" : "SwiftDeployTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:SwiftDeploy.xcodeproj",
+        "identifier" : "1CC4AB7A2F9E33F700CD4306",
+        "name" : "SwiftDeployUITests"
+      }
+    }
+  ],
+  "version" : 1
+}

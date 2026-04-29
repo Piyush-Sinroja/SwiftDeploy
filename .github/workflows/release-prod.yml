@@ -1,0 +1,81 @@
+# =============================================================
+# Release Prod Workflow — Production Upload
+# =============================================================
+# Triggered ONLY when QA approves Stage build.
+# Two trigger options:
+#
+# 1. Tag (v*.*.*-rc*) — release manager creates after QA approval:
+#      git tag v1.1.0-rc1
+#      git push origin v1.1.0-rc1
+#
+# 2. Manual (workflow_dispatch) — from GitHub Actions UI.
+#
+# After prod build uploaded:
+#   QA smoke tests prod build on internal TestFlight.
+#   If approved → run submit-review.yml to submit to Apple.
+#   If bug found → fix on release branch → new Stage build
+#               → QA approves → new rc tag → new prod build
+#
+# DEBUGGING:
+#   build-logs-release-*  → compile/signing errors
+#   fastlane-report-*     → which step failed
+#   IPA-release-*         → on success, the exact binary uploaded
+#   dSYM-release-*        → on success, 90 day retention
+# =============================================================
+
+name: Release — Prod App Store Connect
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+-rc[0-9]+'  # release candidate: v1.0.0-rc1
+      - 'v[0-9]+.[0-9]+.[0-9]+'             # hotfix release: v1.0.1
+
+  workflow_dispatch:
+    inputs:
+      clear_cache:
+        description: 'Skip all caches for a clean build'
+        type: boolean
+        default: false
+      reason:
+        description: 'Reason for manual prod build (e.g. QA approved Stage build 35)'
+        required: true
+        type: string
+
+jobs:
+  # Log manual trigger info — only for workflow_dispatch
+  log-trigger:
+    name: Log Trigger
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Log Details
+        run: |
+          echo "======================================"
+          echo "Manual Prod Build Triggered"
+          echo "======================================"
+          echo "Triggered by: ${{ github.actor }}"
+          echo "Reason:       ${{ github.event.inputs.reason }}"
+          echo "Branch/SHA:   ${{ github.sha }}"
+          echo "Clear cache:  ${{ github.event.inputs.clear_cache }}"
+          echo "======================================"
+
+  prod-build:
+    name: Upload to Prod App Store Connect
+    uses: ./.github/workflows/_reusable-build.yml
+    with:
+      lane: upload_appstore_prod
+      clear_cache: ${{ github.event.inputs.clear_cache == 'true' }}
+    secrets:
+      APPLE_ID:                      ${{ secrets.APPLE_ID }}
+      TEAM_ID:                       ${{ secrets.TEAM_ID }}
+      ITC_TEAM_ID:                   ${{ secrets.ITC_TEAM_ID }}
+      ASC_KEY_ID:                    ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID:                 ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_CONTENT:               ${{ secrets.ASC_KEY_CONTENT }}
+      MATCH_GIT_URL:                 ${{ secrets.MATCH_GIT_URL }}
+      MATCH_PASSWORD:                ${{ secrets.MATCH_PASSWORD }}
+      MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+      SLACK_WEBHOOK_URL:             ${{ secrets.SLACK_WEBHOOK_URL }}
+      BETA_CONTACT_EMAIL:            ${{ secrets.BETA_CONTACT_EMAIL }}
+      BETA_CONTACT_PHONE:            ${{ secrets.BETA_CONTACT_PHONE }}

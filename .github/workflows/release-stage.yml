@@ -1,0 +1,62 @@
+# =============================================================
+# Release Stage Workflow — Regression QA
+# =============================================================
+# AUTO: Triggers on every push to release/* branch.
+# MANUAL: workflow_dispatch with optional cache control.
+#
+# Builds Stage ONLY — prod build triggered separately via
+# release-prod.yml (tag v*.*.*-rc* or manual dispatch).
+#
+# Multiple bug fixes land on release branch during QA.
+# Each push generates a new Stage build for QA to retest.
+# Prod build is only generated when QA approves Stage.
+#
+# DEBUGGING:
+#   On failure → check Artifacts section of failed run:
+#   build-logs-beta-*    → compile errors
+#   fastlane-report-*    → which step failed and why
+# =============================================================
+
+name: Release — Stage TestFlight
+
+on:
+  push:
+    branches:
+      - 'release/**'
+
+  # Manual trigger with cache control
+  workflow_dispatch:
+    inputs:
+      clear_cache:
+        description: 'Skip all caches for a clean build'
+        type: boolean
+        default: false
+      reason:
+        description: 'Reason for manual trigger (optional)'
+        required: false
+        type: string
+
+concurrency:
+  group: release-stage-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  stage-build:
+    name: Upload to Stage TestFlight (Regression)
+    uses: ./.github/workflows/_reusable-build.yml
+    with:
+      lane: upload_testflight_stage
+      clear_cache: ${{ github.event.inputs.clear_cache == 'true' }}
+    secrets:
+      APPLE_ID:                      ${{ secrets.APPLE_ID }}
+      TEAM_ID:                       ${{ secrets.TEAM_ID }}
+      ITC_TEAM_ID:                   ${{ secrets.ITC_TEAM_ID }}
+      ASC_KEY_ID:                    ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID:                 ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_CONTENT:               ${{ secrets.ASC_KEY_CONTENT }}
+      MATCH_GIT_URL:                 ${{ secrets.MATCH_GIT_URL }}
+      MATCH_PASSWORD:                ${{ secrets.MATCH_PASSWORD }}
+      MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+      SLACK_WEBHOOK_URL:             ${{ secrets.SLACK_WEBHOOK_URL }}
+      BETA_CONTACT_EMAIL:            ${{ secrets.BETA_CONTACT_EMAIL }}
+      BETA_CONTACT_PHONE:            ${{ secrets.BETA_CONTACT_PHONE }}

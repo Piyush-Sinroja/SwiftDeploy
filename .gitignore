@@ -61,3 +61,22 @@ fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
 .claude/
+
+# Environment variables — NEVER commit these
+.env
+.env.local
+.env.*.local
+
+# Fastlane build output
+build/
+fastlane/test_output/
+fastlane/screenshots/
+fastlane/Preview.html
+
+# Match certificates downloaded locally
+certs/
+profiles/
+
+# Bundler
+.bundle/
+vendor/bundle

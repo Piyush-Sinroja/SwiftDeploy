@@ -1,0 +1,280 @@
+# =============================================================
+# Reusable Build Workflow
+# =============================================================
+# Never triggered directly. Called by other workflows.
+# Contains all shared build steps — cache, build, artifacts.
+#
+# CACHE BUSTING:
+#   Option 1 (temporary): pass clear_cache: true in workflow_dispatch
+#   Option 2 (permanent): increment CACHE_VERSION below
+#
+# DEBUGGING FAILED BUILDS:
+#   GitHub Actions → failed run → Artifacts section (bottom)
+#   build-logs-*   → xcodebuild/gym output → shows compile errors
+#   fastlane-report-* → lane execution summary → shows which step failed
+#   test-results-*  → JUnit XML → shows which tests failed
+#
+# ARTIFACTS:
+#   IPA       → 14 days  → QA can download and install directly
+#   dSYM      → 90 days  → upload to Crashlytics/Sentry for crash reports
+#   logs      → 3 days   → only on failure, for debugging
+#   reports   → 7 days   → always, lane execution summary
+# =============================================================
+
+name: Reusable Build
+
+on:
+  workflow_call:
+    inputs:
+      lane:
+        description: 'Fastlane lane to execute'
+        required: true
+        type: string
+      xcode-version:
+        description: 'Xcode version path'
+        required: false
+        type: string
+        default: '/Applications/Xcode_26.3.app'
+      # Set true to skip all caches and do a completely clean build.
+      # Use when cache is suspected to cause build failures.
+      clear_cache:
+        description: 'Skip all caches for a clean build'
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      APPLE_ID:
+        required: true
+      TEAM_ID:
+        required: true
+      ITC_TEAM_ID:
+        required: false
+      ASC_KEY_ID:
+        required: true
+      ASC_ISSUER_ID:
+        required: true
+      ASC_KEY_CONTENT:
+        required: true
+      MATCH_GIT_URL:
+        required: true
+      MATCH_PASSWORD:
+        required: true
+      MATCH_GIT_BASIC_AUTHORIZATION:
+        required: true
+      SLACK_WEBHOOK_URL:
+        required: false
+      BETA_CONTACT_EMAIL:
+        required: false
+      BETA_CONTACT_PHONE:
+        required: false
+
+# ─── Cache Version ───────────────────────────────────────────
+# Increment CACHE_VERSION to permanently bust ALL caches.
+# This is faster than deleting caches from GitHub UI.
+# Example: change v1 → v2 to force fresh cache on next run.
+env:
+  CACHE_VERSION: v1
+
+jobs:
+  build:
+    name: Run ${{ inputs.lane }}
+    runs-on: macos-latest
+
+    steps:
+      # ── Checkout ─────────────────────────────────────────────
+      # fetch-depth 0 = full git history
+      # Required for changelog_from_git_commits in Fastfile
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ── Xcode ────────────────────────────────────────────────
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "26.3"
+
+      - name: List available Xcode versions
+        run: ls /Applications | grep Xcode
+
+      - name: Select Xcode Version
+        run: sudo xcode-select -s "/Applications/Xcode_26.3.app"
+
+      - name: Check Installed iOS SDKs
+        run: xcodebuild -showsdks
+
+      # ── Ruby + Fastlane ──────────────────────────────────────
+      # bundler-cache: true caches gems automatically
+      # Reads exact versions from Gemfile.lock
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+
+      # ── CocoaPods Cache ──────────────────────────────────────
+      # Key: hash of Podfile.lock (exact dependency versions)
+      # Only invalidates when a pod version changes
+      # Skipped if clear_cache is true OR no Podfile.lock exists
+      - name: Cache CocoaPods
+        if: ${{ inputs.clear_cache != true && hashFiles('Podfile.lock') != '' }}
+        uses: actions/cache@v4
+        id: pods-cache
+        with:
+          path: |
+            Pods/
+            ~/Library/Caches/CocoaPods
+          key: ${{ env.CACHE_VERSION }}-pods-${{ runner.os }}-${{ hashFiles('Podfile.lock') }}
+          restore-keys: |
+            ${{ env.CACHE_VERSION }}-pods-${{ runner.os }}-
+
+      # Install pods if cache missed and Podfile exists
+      - name: Install CocoaPods
+        if: ${{ hashFiles('Podfile') != '' && steps.pods-cache.outputs.cache-hit != 'true' }}
+        run: pod install --repo-update
+
+      # ── SPM Cache ────────────────────────────────────────────
+      # Key: hash of Package.resolved (exact package versions)
+      # Only invalidates when a package version changes
+      # Skipped if clear_cache is true OR no Package.resolved exists
+      - name: Cache SPM Dependencies
+        if: ${{ inputs.clear_cache != true && hashFiles('**/Package.resolved') != '' }}
+        id: spm-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Developer/Xcode/DerivedData/**/SourcePackages/checkouts
+            ~/Library/Caches/org.swift.swiftpm
+          key: ${{ env.CACHE_VERSION }}-spm-${{ runner.os }}-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            ${{ env.CACHE_VERSION }}-spm-${{ runner.os }}-
+
+      # ── DerivedData Cache ─────────────────────────────────────
+      # Incremental compilation — only recompile changed files.
+      # Cache key includes lane name so different schemes
+      # (Dev, QA, Prod) do not share potentially incompatible caches.
+      # Skipped if clear_cache is true.
+      - name: Cache DerivedData
+        if: ${{ inputs.clear_cache != true }}
+        id: derived-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: ${{ env.CACHE_VERSION }}-derived-${{ runner.os }}-${{ inputs.lane }}-${{ hashFiles('**/*.swift', '**/*.m', '**/*.xcconfig') }}
+          restore-keys: |
+            ${{ env.CACHE_VERSION }}-derived-${{ runner.os }}-${{ inputs.lane }}-
+            ${{ env.CACHE_VERSION }}-derived-${{ runner.os }}-
+
+      # ── Log Cache Status ─────────────────────────────────────
+      # Prints to logs so developer knows exactly which caches hit
+      - name: Log Cache Status
+        run: |
+          if [ "${{ inputs.clear_cache }}" == "true" ]; then
+            echo "⚠️  Cache DISABLED — clean build requested"
+          else
+            echo "=== Cache Status ==="
+            echo "SPM cache hit:         ${{ steps.spm-cache.outputs.cache-hit == 'true' && 'YES ✅' || 'NO ❌ (will download packages)' }}"
+            echo "DerivedData cache hit: ${{ steps.derived-cache.outputs.cache-hit == 'true' && 'YES ✅ (incremental build)' || 'NO ❌ (full build)' }}"
+            echo "===================="
+          fi
+
+      # ── Run Fastlane ─────────────────────────────────────────
+      # All secrets injected as environment variables.
+      # Fastlane reads them via ENV["SECRET_NAME"].
+      - name: Run Fastlane ${{ inputs.lane }}
+        run: bundle exec fastlane ${{ inputs.lane }}
+        env:
+          # ── Secrets (sensitive) ──────────────────────────────
+          APPLE_ID:                      ${{ secrets.APPLE_ID }}
+          TEAM_ID:                       ${{ secrets.TEAM_ID }}
+          ITC_TEAM_ID:                   ${{ secrets.ITC_TEAM_ID }}
+          ASC_KEY_ID:                    ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID:                 ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_CONTENT:               ${{ secrets.ASC_KEY_CONTENT }}
+          MATCH_GIT_URL:                 ${{ secrets.MATCH_GIT_URL }}
+          MATCH_PASSWORD:                ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          SLACK_WEBHOOK_URL:             ${{ secrets.SLACK_WEBHOOK_URL }}
+          BETA_CONTACT_EMAIL:            ${{ secrets.BETA_CONTACT_EMAIL }}
+          BETA_CONTACT_PHONE:            ${{ secrets.BETA_CONTACT_PHONE }}
+          CI:                            true
+
+      # ==========================================================
+      # ARTIFACTS — Upload after build completes
+      # ==========================================================
+
+      # ── IPA Artifact ─────────────────────────────────────────
+      # Uploaded on success only.
+      # QA can download and install directly via AltStore/Xcode.
+      # 14 day retention — enough for QA cycle.
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: IPA-${{ inputs.lane }}-build${{ github.run_number }}
+          path: build/*.ipa
+          retention-days: 14
+          if-no-files-found: ignore
+
+      # ── dSYM Artifact ────────────────────────────────────────
+      # Uploaded on success.
+      # 90 day retention — needed for symbolication of crash reports
+      # from live users long after the build is uploaded.
+      # Upload these to Crashlytics/Sentry/Firebase as well.
+      - name: Upload dSYM
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: dSYM-${{ inputs.lane }}-build${{ github.run_number }}
+          path: build/*.dSYM.zip
+          retention-days: 90
+          if-no-files-found: ignore
+
+      # ── Fastlane Report ──────────────────────────────────────
+      # Always uploaded — even on failure.
+      # Shows which lane step failed and the error message.
+      # Most useful artifact for debugging CI failures.
+      - name: Upload Fastlane Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fastlane-report-${{ inputs.lane }}-${{ github.run_number }}
+          path: fastlane/report.xml
+          retention-days: 7
+          if-no-files-found: ignore
+
+      # ── Build Logs (Failure Only) ─────────────────────────────
+      # Only uploaded when build fails.
+      # Contains full xcodebuild output — shows exact compile errors,
+      # signing failures, missing files, etc.
+      # gym logs → ~/Library/Logs/gym/
+      # scan logs → ~/Library/Logs/scan/
+      - name: Upload Build Logs on Failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: build-logs-${{ inputs.lane }}-${{ github.run_number }}
+          path: |
+            ~/Library/Logs/gym/
+            ~/Library/Logs/scan/
+          retention-days: 3
+          if-no-files-found: ignore
+
+      # ── xcresult Bundle (Failure Only) ────────────────────────
+      # Only uploaded when build or tests fail.
+      # xcresult contains:
+      #   - Full build transcript with errors highlighted
+      #   - Test failure details with stack traces
+      #   - UI test screenshots at point of failure
+      # Open with Xcode: File → Open → select .xcresult
+      - name: Upload xcresult on Failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: xcresult-${{ inputs.lane }}-${{ github.run_number }}
+          path: |
+            ~/Library/Developer/Xcode/DerivedData/**/Logs/Test/*.xcresult
+            fastlane/test_output/*.xcresult
+          retention-days: 3
+          if-no-files-found: ignore

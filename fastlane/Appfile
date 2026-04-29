@@ -1,3 +1,31 @@
-app_identifier("com.yourname.swiftdeploy")
-apple_id("your@apple.id")
-team_id("YOUR10DIGITTEAMID")
+# =============================================================
+# Appfile — Global Fastlane Defaults
+# =============================================================
+# Sets fallback values used by Fastlane actions when no explicit
+# value is passed in the lane.
+#
+# Note: Our Fastfile passes explicit app_identifier, api_key,
+# and team_id to every action. These are true fallbacks only.
+#
+# All values read from ENV variables.
+# Local → .env file  |  CI → GitHub Secrets
+# =============================================================
+
+# Default bundle ID — used as fallback when lane does not
+# specify app_identifier explicitly. We default to Prod.
+app_identifier(ENV["APP_IDENTIFIER_PROD"])
+
+# Apple ID email — used by older Fastlane actions that do not
+# support API key auth. Our setup uses API key so this is
+# a safety fallback only.
+apple_id(ENV["APPLE_ID"])
+
+# Apple Developer Team ID (10 characters).
+# Used by Match and some build actions as fallback.
+# Found at: developer.apple.com → Account → Membership
+team_id(ENV["TEAM_ID"])
+
+# App Store Connect Team ID.
+# Usually identical to team_id.
+# Only differs for enterprise or multi-org accounts.
+itc_team_id(ENV["ITC_TEAM_ID"] || ENV["TEAM_ID"])

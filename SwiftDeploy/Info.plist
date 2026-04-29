@@ -4,5 +4,11 @@
 <dict>
 	<key>API_BASE_URL</key>
 	<string>$(API_BASE_URL)</string>
+	<key>CFBundleDisplayName</key>
+	<string>$(APP_NAME)</string>
+	<key>CFBundleIconName</key>
+	<string>$(ASSETCATALOG_COMPILER_APPICON_NAME)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>

@@ -1,0 +1,57 @@
+# =============================================================
+# Beta Workflow — Continuous QA
+# =============================================================
+# AUTO: Triggers on every push to dev (feature merged).
+# MANUAL: workflow_dispatch with optional cache control.
+#
+# DEBUGGING:
+#   On failure → check Artifacts section of failed run:
+#   build-logs-beta-*    → xcodebuild output (compile errors)
+#   fastlane-report-beta-* → which Fastlane step failed
+#   IPA-beta-*           → on success, downloadable app
+#   dSYM-beta-*          → on success, crash symbols
+# =============================================================
+
+name: Beta — Stage TestFlight
+
+on:
+  push:
+    branches:
+      - dev
+
+  # Manual trigger — allows cache control when needed
+  workflow_dispatch:
+    inputs:
+      clear_cache:
+        description: 'Skip all caches for a clean build (use when cache causes failures)'
+        type: boolean
+        default: false
+      reason:
+        description: 'Reason for manual trigger (optional)'
+        required: false
+        type: string
+
+concurrency:
+  group: beta-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  beta:
+    name: Upload to Stage TestFlight
+    uses: ./.github/workflows/_reusable-build.yml
+    with:
+      lane: upload_testflight_stage
+      clear_cache: ${{ github.event.inputs.clear_cache == 'true' }}
+    secrets:
+      APPLE_ID:                      ${{ secrets.APPLE_ID }}
+      TEAM_ID:                       ${{ secrets.TEAM_ID }}
+      ITC_TEAM_ID:                   ${{ secrets.ITC_TEAM_ID }}
+      ASC_KEY_ID:                    ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID:                 ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_CONTENT:               ${{ secrets.ASC_KEY_CONTENT }}
+      MATCH_GIT_URL:                 ${{ secrets.MATCH_GIT_URL }}
+      MATCH_PASSWORD:                ${{ secrets.MATCH_PASSWORD }}
+      MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+      SLACK_WEBHOOK_URL:             ${{ secrets.SLACK_WEBHOOK_URL }}
+      BETA_CONTACT_EMAIL:            ${{ secrets.BETA_CONTACT_EMAIL }}
+      BETA_CONTACT_PHONE:            ${{ secrets.BETA_CONTACT_PHONE }}
