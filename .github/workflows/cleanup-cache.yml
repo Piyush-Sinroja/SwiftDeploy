@@ -16,6 +16,9 @@
 
 name: Cleanup Cache
 
+permissions:
+  actions: write  # required to delete caches via GitHub API
+
 on:
   # Trigger 1 — branch or tag deleted
   delete:
