@@ -500,29 +500,35 @@ platform :ios do
   # Private — Core build lane. Accepts environment and returns
   # IPA and dSYM paths as a hash for use in upload lanes.
   #
-  # clean: true           — prevents stale artifact issues
+  # clean: false          — uses DerivedData cache for faster builds
+  #                         retries with clean: true if build fails
   # include_symbols: true — generates dSYM for crash symbolication
   # export_team_id        — prevents wrong team in multi-team accounts
   # -parallelizeTargets   — builds multiple targets simultaneously
+  # skip_package_dependencies_resolution — skips SPM resolve (CI handles it)
+  # disable_package_automatic_updates   — prevents unexpected package updates
   private_lane :build_ipa_for_environment do |options|
     env            = options[:environment]
     scheme         = get_scheme(environment:    env)
     config         = get_config(environment:    env)
     bundle_id      = get_bundle_id(environment: env)
     is_dev         = env == "dev"
+    is_ci          = ENV["CI"] == "true"
     export_method  = is_dev ? "development" : "app-store"
     profile_prefix = is_dev ? "match Development" : "match AppStore"
 
     build_params = {
-      scheme:           scheme,
-      configuration:    config,
-      clean:            true,
-      include_symbols:  true,
-      export_method:    export_method,
-      export_team_id:   TEAM_ID,
-      output_directory: OUTPUT_DIR,
-      output_name:      "#{APP_NAME}-#{env.capitalize}.ipa",
-      xcargs:           "-parallelizeTargets",
+      scheme:                               scheme,
+      configuration:                        config,
+      clean:                                false,
+      include_symbols:                      true,
+      export_method:                        export_method,
+      export_team_id:                       TEAM_ID,
+      output_directory:                     OUTPUT_DIR,
+      output_name:                          "#{APP_NAME}-#{env.capitalize}.ipa",
+      xcargs:                               "-parallelizeTargets",
+      disable_package_automatic_updates:    true,
+      skip_package_dependencies_resolution: is_ci,
       export_options: {
         method:               export_method,
         provisioningProfiles: {
@@ -538,7 +544,17 @@ platform :ios do
       build_params[:project] = PROJECT
     end
 
-    build_app(build_params)
+    # Try incremental build first (faster).
+    # If it fails due to cache issues, retry with clean build.
+    begin
+      build_app(build_params)
+    rescue => ex
+      UI.important("⚠️ Incremental build failed: #{ex.message}")
+      UI.important("🔄 Retrying with clean build...")
+      build_params[:clean] = true
+      build_params[:skip_package_dependencies_resolution] = false
+      build_app(build_params)
+    end
 
     {
       ipa_path:  lane_context[SharedValues::IPA_OUTPUT_PATH],
@@ -626,14 +642,14 @@ platform :ios do
     result = build_ipa_for_environment(environment: "prod")
 
     upload_to_app_store(
-      api_key:           api_key,
-      app_identifier:    APP_ID_PROD,
-      ipa:               result[:ipa_path],
-      skip_screenshots:  true,
-      skip_metadata:     true,
-      # Upload only — manual submission after QA smoke test
-      submit_for_review: false,
-      force:             true
+      api_key:                        api_key,
+      app_identifier:                 APP_ID_PROD,
+      ipa:                            result[:ipa_path],
+      skip_screenshots:               true,
+      skip_metadata:                  true,
+      submit_for_review:              false,
+      force:                          true,
+      run_precheck_before_submit:     false
     )
 
     version = get_version_number(xcodeproj: PROJECT)
@@ -707,12 +723,13 @@ platform :ios do
   lane :upload_screenshots do
     api_key = asc_api_key
     upload_to_app_store(
-      api_key:            api_key,
-      app_identifier:     APP_ID_PROD,
-      skip_binary_upload: true,
-      skip_metadata:      true,
-      skip_screenshots:   false,
-      force:              true
+      api_key:                    api_key,
+      app_identifier:             APP_ID_PROD,
+      skip_binary_upload:         true,
+      skip_metadata:              true,
+      skip_screenshots:           false,
+      force:                      true,
+      run_precheck_before_submit: false
     )
   end
 
@@ -722,12 +739,13 @@ platform :ios do
   lane :upload_metadata do
     api_key = asc_api_key
     upload_to_app_store(
-      api_key:            api_key,
-      app_identifier:     APP_ID_PROD,
-      skip_binary_upload: true,
-      skip_screenshots:   true,
-      skip_metadata:      false,
-      force:              true
+      api_key:                    api_key,
+      app_identifier:             APP_ID_PROD,
+      skip_binary_upload:         true,
+      skip_screenshots:           true,
+      skip_metadata:              false,
+      force:                      true,
+      run_precheck_before_submit: false
     )
   end
 

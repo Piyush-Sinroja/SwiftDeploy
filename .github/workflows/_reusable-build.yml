@@ -140,6 +140,7 @@ jobs:
       # Skipped if clear_cache is true OR no Package.resolved exists
       - name: Cache SPM Dependencies
         if: ${{ inputs.clear_cache != true && hashFiles('**/Package.resolved') != '' }}
+        id: spm-cache
         uses: actions/cache@v4
         with:
           path: |
@@ -156,6 +157,7 @@ jobs:
       # Skipped if clear_cache is true.
       - name: Cache DerivedData
         if: ${{ inputs.clear_cache != true }}
+        id: derived-cache
         uses: actions/cache@v4
         with:
           path: ~/Library/Developer/Xcode/DerivedData
@@ -165,13 +167,16 @@ jobs:
             ${{ env.CACHE_VERSION }}-derived-${{ runner.os }}-
 
       # ── Log Cache Status ─────────────────────────────────────
-      # Prints to logs so developer knows if build used cache or not
+      # Prints to logs so developer knows exactly which caches hit
       - name: Log Cache Status
         run: |
           if [ "${{ inputs.clear_cache }}" == "true" ]; then
             echo "⚠️  Cache DISABLED — clean build requested"
           else
-            echo "✅ Cache ENABLED — using cached DerivedData if available"
+            echo "=== Cache Status ==="
+            echo "SPM cache hit:         ${{ steps.spm-cache.outputs.cache-hit == 'true' && 'YES ✅' || 'NO ❌ (will download packages)' }}"
+            echo "DerivedData cache hit: ${{ steps.derived-cache.outputs.cache-hit == 'true' && 'YES ✅ (incremental build)' || 'NO ❌ (full build)' }}"
+            echo "===================="
           fi
 
       # ── Run Fastlane ─────────────────────────────────────────
