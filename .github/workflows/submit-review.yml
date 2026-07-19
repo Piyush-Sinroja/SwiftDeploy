@@ -65,6 +65,28 @@ jobs:
           echo "Submitted by: ${{ github.actor }}"
           echo "Notes: ${{ github.event.inputs.release_notes }}"
 
+      - name: Back-Merge Reminder
+        run: |
+          echo "=============================================="
+          echo "  POST-APPROVAL CHECKLIST (do after Apple approves)"
+          echo "=============================================="
+          echo ""
+          echo "  1. Merge release branch → main"
+          echo "     gh pr create --base main --head release/${{ github.event.inputs.version }} --title 'release: ${{ github.event.inputs.version }}'"
+          echo ""
+          echo "  2. Tag main with final version"
+          echo "     git checkout main && git pull origin main"
+          echo "     git tag v${{ github.event.inputs.version }}"
+          echo "     git push origin v${{ github.event.inputs.version }}"
+          echo ""
+          echo "  3. Back-merge main → dev (so dev gets all release fixes)"
+          echo "     git checkout dev && git pull origin dev"
+          echo "     git merge main"
+          echo "     git push origin dev"
+          echo ""
+          echo "  ⚠️  Skipping step 3 means dev loses fixes made during this release cycle."
+          echo "=============================================="
+
   # ── Submit for Review ─────────────────────────────────────
   submit:
     name: Submit to Apple Review

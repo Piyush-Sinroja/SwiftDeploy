@@ -43,6 +43,47 @@ on:
         type: string
 
 jobs:
+  # ── Validate tag is on a release branch ──────────────────────
+  # Prevents accidental prod builds when a tag is pushed on dev or main.
+  # Only runs for tag-triggered builds — manual dispatch is exempt
+  # because the release manager is explicitly choosing the SHA.
+  validate-tag-branch:
+    name: Validate Tag Branch
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check tag is on a release branch
+        run: |
+          TAG_SHA="${{ github.sha }}"
+          echo "Tag SHA: $TAG_SHA"
+          echo "Tag: ${{ github.ref_name }}"
+
+          # Find all release/* branches that contain this commit
+          RELEASE_BRANCHES=$(git branch -r --contains "$TAG_SHA" | grep 'origin/release/' || true)
+
+          if [ -z "$RELEASE_BRANCHES" ]; then
+            echo "❌ ERROR: Tag ${{ github.ref_name }} was not created on a release/* branch."
+            echo ""
+            echo "This tag points to commit $TAG_SHA which is not on any release/* branch."
+            echo "Prod builds must be tagged from a release/* branch."
+            echo ""
+            echo "To fix:"
+            echo "  git checkout release/x.x.x"
+            echo "  git tag -d ${{ github.ref_name }}"
+            echo "  git push origin :refs/tags/${{ github.ref_name }}"
+            echo "  git tag ${{ github.ref_name }}"
+            echo "  git push origin ${{ github.ref_name }}"
+            exit 1
+          fi
+
+          echo "✅ Tag is on release branch(es):"
+          echo "$RELEASE_BRANCHES"
+
   # Log manual trigger info — only for workflow_dispatch
   log-trigger:
     name: Log Trigger
@@ -62,6 +103,8 @@ jobs:
 
   prod-build:
     name: Upload to Prod App Store Connect
+    needs: [validate-tag-branch]
+    if: always() && (needs.validate-tag-branch.result == 'success' || needs.validate-tag-branch.result == 'skipped')
     uses: ./.github/workflows/_reusable-build.yml
     with:
       lane: upload_appstore_prod

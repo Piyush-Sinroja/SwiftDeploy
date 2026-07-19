@@ -7,8 +7,8 @@
 #
 # Branch strategy:
 #   feature/* → develop  : PR checks (lint + tests)
-#   develop push         : upload_testflight_stage → Stage TestFlight
-#   release/* push       : upload_testflight_stage → Stage TestFlight
+#   develop push         : upload_testflight_dev   → Dev TestFlight  (dev server)
+#   release/* push       : upload_testflight_stage → Stage TestFlight (QA server)
 #   tag v*.*.*-rc*       : upload_appstore_prod    → Prod App Store Connect
 #   manual dispatch      : upload_appstore_prod    → Prod App Store Connect
 #   main push            : upload_appstore_prod    → Prod App Store Connect (hotfixes)
@@ -21,7 +21,7 @@
 #   Section 5  — Version Management    (bump_patch, bump_minor, bump_major)
 #   Section 6  — Build Number          (get_testflight_build_number, set_build_number, get_latest_testflight_build)
 #   Section 7  — Building              (build_dev, build_ipa_for_environment)
-#   Section 8  — TestFlight            (upload_testflight_stage)
+#   Section 8  — TestFlight            (upload_testflight_dev, upload_testflight_stage)
 #   Section 9  — App Store             (upload_appstore_prod, submit_appstore_review)
 #   Section 10 — App Store Metadata    (screenshots, upload_screenshots, upload_metadata)
 #   Section 11 — Private Utilities     (send_slack_notification)
@@ -41,6 +41,7 @@ SCHEME_DEV      = "#{APP_NAME}-Dev"
 SCHEME_QA       = "#{APP_NAME}-QA"
 SCHEME_PROD     = "#{APP_NAME}"
 CONFIG_DEV      = "Dev Debug"
+CONFIG_DEV_REL  = "Dev Release"
 CONFIG_QA_REL   = "QA Release"
 CONFIG_PROD_REL = "Prod Release"
 DESTINATION_TEST = "platform=iOS Simulator,OS=latest,name=iPhone 16 Pro"
@@ -133,36 +134,37 @@ platform :ios do
   end
 
   # Returns Xcode scheme name for given environment.
-  # environment: "dev" | "qa" | "prod"
+  # environment: "dev" | "dev-release" | "qa" | "prod"
   private_lane :get_scheme do |options|
     case options[:environment]
-    when "dev"  then SCHEME_DEV
-    when "qa"   then SCHEME_QA
-    when "prod" then SCHEME_PROD
+    when "dev", "dev-release" then SCHEME_DEV
+    when "qa"                 then SCHEME_QA
+    when "prod"               then SCHEME_PROD
     else
-      UI.user_error!("Unknown environment: #{options[:environment]}. Use dev, qa or prod.")
+      UI.user_error!("Unknown environment: #{options[:environment]}. Use dev, dev-release, qa or prod.")
     end
   end
 
   # Returns bundle ID constant for given environment.
   private_lane :get_bundle_id do |options|
     case options[:environment]
-    when "dev"  then APP_ID_DEV
-    when "qa"   then APP_ID_QA
-    when "prod" then APP_ID_PROD
+    when "dev", "dev-release" then APP_ID_DEV
+    when "qa"                 then APP_ID_QA
+    when "prod"               then APP_ID_PROD
     else
-      UI.user_error!("Unknown environment: #{options[:environment]}. Use dev, qa or prod.")
+      UI.user_error!("Unknown environment: #{options[:environment]}. Use dev, dev-release, qa or prod.")
     end
   end
 
   # Returns Xcode build configuration name for given environment.
   private_lane :get_config do |options|
     case options[:environment]
-    when "dev"  then CONFIG_DEV
-    when "qa"   then CONFIG_QA_REL
-    when "prod" then CONFIG_PROD_REL
+    when "dev"         then CONFIG_DEV
+    when "dev-release" then CONFIG_DEV_REL
+    when "qa"          then CONFIG_QA_REL
+    when "prod"        then CONFIG_PROD_REL
     else
-      UI.user_error!("Unknown environment: #{options[:environment]}. Use dev, qa or prod.")
+      UI.user_error!("Unknown environment: #{options[:environment]}. Use dev, dev-release, qa or prod.")
     end
   end
 
@@ -277,16 +279,15 @@ platform :ios do
     )
   end
 
-  # Sync App Store certificates for QA and Prod bundle IDs.
-  # Dev excluded — dev builds never go to TestFlight or App Store.
+  # Sync App Store certificates for Dev, QA and Prod bundle IDs.
   # Accepts optional api_key to avoid creating a second key.
   # Run: bundle exec fastlane certs_appstore
   lane :certs_appstore do |options|
-    validate_env_vars(vars: %w[APP_ID_QA APP_ID_PROD])
+    validate_env_vars(vars: %w[APP_ID_DEV APP_ID_QA APP_ID_PROD])
     api_key = options[:api_key] || asc_api_key
     match(
       type:           "appstore",
-      app_identifier: [APP_ID_QA, APP_ID_PROD],
+      app_identifier: [APP_ID_DEV, APP_ID_QA, APP_ID_PROD],
       api_key:        api_key,
       readonly:       ENV["CI"] ? true : false,
       force:          false
@@ -564,14 +565,58 @@ platform :ios do
 
   # =============================================================
   # SECTION 8 — TestFlight Distribution
-  # Stage builds for QA team internal testing.
+  #
+  #   upload_testflight_dev   → dev branch    → Dev TestFlight  (dev server)
+  #   upload_testflight_stage → release/*     → Stage TestFlight (QA server)
+  #
+  # Two separate apps in App Store Connect — dev builds never
+  # overwrite the release build QA is regressing.
   # =============================================================
 
+  # Build Dev Release IPA and upload to Dev TestFlight.
+  # Triggered automatically on every push to dev (feature merged).
+  # Uses Dev scheme + Dev Release config → connects to dev server.
+  # Run manually: bundle exec fastlane upload_testflight_dev
+  lane :upload_testflight_dev do
+    validate_env_vars(vars: %w[APP_ID_DEV ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_CONTENT TEAM_ID])
+
+    api_key   = asc_api_key
+    changelog = changelog_from_git_commits(commits_count: 10, pretty: "- %s")
+
+    certs_appstore(api_key: api_key)
+    set_build_number(bundle_id: APP_ID_DEV, api_key: api_key)
+    result = build_ipa_for_environment(environment: "dev-release")
+
+    upload_to_testflight(
+      api_key:                           api_key,
+      app_identifier:                    APP_ID_DEV,
+      ipa:                               result[:ipa_path],
+      skip_waiting_for_build_processing: true,
+      reject_build_waiting_for_review:   true,
+      beta_app_review_info: {
+        contact_email:      BETA_EMAIL,
+        contact_first_name: BETA_FIRST_NAME,
+        contact_last_name:  BETA_LAST_NAME,
+        contact_phone:      BETA_PHONE
+      },
+      beta_app_description:    "#{APP_NAME} Dev build — feature testing against dev server",
+      beta_app_feedback_email: BETA_EMAIL,
+      changelog:               changelog,
+      distribute_external:     false,
+      notify_external_testers: false
+    )
+
+    version = get_version_number(xcodeproj: PROJECT)
+    build   = get_build_number(xcodeproj:   PROJECT)
+
+    send_slack_notification(
+      message: ":hammer: *Dev Build #{version} (#{build})* → Dev TestFlight\nBranch: #{git_branch}\n#{changelog}"
+    )
+  end
+
   # Build QA Release IPA and upload to Stage TestFlight.
-  # Triggered automatically by CI:
-  #   - push to develop  → continuous QA after each feature merge
-  #   - push to release/* → regression QA during release preparation
-  # Both use the same Stage TestFlight app.
+  # Triggered automatically on every push to release/*.
+  # Uses QA scheme + QA Release config → connects to QA server.
   # Run manually: bundle exec fastlane upload_testflight_stage
   lane :upload_testflight_stage do
     validate_env_vars(vars: %w[APP_ID_QA ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_CONTENT TEAM_ID])
@@ -613,7 +658,7 @@ platform :ios do
     build   = get_build_number(xcodeproj:   PROJECT)
 
     send_slack_notification(
-      message: ":rocket: *QA Build #{version} (#{build})* → Stage TestFlight\nBranch: #{git_branch}\n#{changelog}"
+      message: ":rocket: *Stage Build #{version} (#{build})* → Stage TestFlight\nBranch: #{git_branch}\n#{changelog}"
     )
   end
 
