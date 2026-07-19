@@ -583,6 +583,10 @@ platform :ios do
     api_key   = asc_api_key
     changelog = changelog_from_git_commits(commits_count: 10, pretty: "- %s")
 
+    # Dev scheme archives with development signing — certs_dev installs
+    # the development profile so the archive step can proceed.
+    # certs_appstore provides the distribution profile for the export step.
+    certs_dev(api_key: api_key)
     certs_appstore(api_key: api_key)
     set_build_number(bundle_id: APP_ID_DEV, api_key: api_key)
     result = build_ipa_for_environment(environment: "dev-release")
